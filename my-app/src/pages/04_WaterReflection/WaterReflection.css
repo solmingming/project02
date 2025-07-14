@@ -1,0 +1,26 @@
+/* WaterReflection.css */
+.water-scene {
+    position: relative;
+    width: 100%;
+    max-width: 800px; /* 원하시는 크기로 조절 */
+    margin: 0 auto;
+    overflow: hidden;
+  }
+  
+  .building {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  
+  .reflection {
+    display: block;
+    width: 100%;
+    height: auto;
+    transform: scaleY(-1);
+    position: absolute;
+    top: 100%;  /* 원본 이미지 바로 아래에 배치 */
+    left: 0;
+    opacity: 0.6; /* 물 속 느낌을 위해 반투명 */
+  }
+  
