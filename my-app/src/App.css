@@ -1,9 +1,27 @@
+/* 글로벌 리셋 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* 루트 높이/너비 고정, 스크롤 방지 */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* App 전체 컨테이너 */
 .App {
   height: 100vh;
   width: 100vw;
   overflow: hidden; /* Prevent scrolling */
 }
 
+/* 페이지를 가로로 배치해서 슬라이드 효과 */
 .page-container {
   display: flex;
   width: 200vw; /* Two pages side-by-side */
@@ -11,11 +29,11 @@
   transition: transform 1s ease-in-out;
   transform: translateX(0);
 }
-
 .page-container.show-next {
   transform: translateX(-100vw);
 }
 
+/* 개별 페이지 */
 .page {
   width: 100vw;
   height: 100vh;
