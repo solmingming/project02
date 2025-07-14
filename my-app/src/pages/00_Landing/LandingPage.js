@@ -1,6 +1,8 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import Sketch from 'react-p5';
 import { useNavigate } from 'react-router-dom';
+// easings를 import합니다.
+import { useSpring, animated, easings } from 'react-spring';
 
 let font;
 let points = [];
@@ -23,10 +25,9 @@ function initPoints(p5) {
   points.forEach(pt => {
     pt.originalX = pt.x;
     pt.originalY = pt.y;
-    // Start points from the center with a random offset for a "burst" effect
     pt.x = p5.width / 2 + p5.random(-50, 50);
     pt.y = p5.height / 2 + p5.random(-50, 50);
-    pt.vx = p5.random(-5, 5); // Give them some initial velocity
+    pt.vx = p5.random(-5, 5);
     pt.vy = p5.random(-5, 5);
   });
 }
@@ -35,12 +36,13 @@ export default function LandingPage() {
   const navigate = useNavigate();
   const idleTimeout = useRef(null);
   const isIdle = useRef(false);
+  const [isZooming, setIsZooming] = useState(false);
 
   const resetIdleTimer = () => {
     isIdle.current = false;
     clearTimeout(idleTimeout.current);
     idleTimeout.current = setTimeout(() => {
-      if (!draggingPoint) { // Don't start idle animation if user is still dragging
+      if (!draggingPoint) {
         isIdle.current = true;
       }
     }, 3000);
@@ -56,7 +58,6 @@ export default function LandingPage() {
     return () => clearTimeout(idleTimeout.current);
   }, []);
 
-
   const preload = (p5) => {
     font = p5.loadFont("/assets/fonts/Mungyeong-Gamhong-Apple.otf");
   };
@@ -69,24 +70,25 @@ export default function LandingPage() {
 
   const windowResized = (p5) => {
     p5.resizeCanvas(p5.windowWidth, p5.windowHeight);
-    hitBuffer.resize(p5.windowWidth, p5.windowHeight);
+    if (hitBuffer)
+      hitBuffer.resize(p5.windowWidth, p5.windowHeight);
     initPoints(p5);
   };
 
   const draw = (p5) => {
-    // Update hit buffer for collision detection
+    p5.clear();
+
     hitBuffer.clear();
     hitBuffer.textFont(font);
     hitBuffer.textSize(dynamicFontSize);
     hitBuffer.fill(255);
     hitBuffer.noStroke();
     hitBuffer.text(textStr, textX, textY);
-    
-    p5.background("#85D0FF");
+
     p5.noStroke();
 
-    const k = 0.1;
-    const damping = 0.84;
+    const k = 0.3;
+    const damping = 0.73;
     let dx = 0, dy = 0;
     if (draggingPoint) {
       dx = draggingPoint.x - draggingPoint.originalX;
@@ -109,11 +111,10 @@ export default function LandingPage() {
         }
       }
 
-      // Add idle animation force when not dragging
       if (isIdle.current && !draggingPoint) {
         const t = p5.frameCount * 0.02;
-        const amplitude = 0.8; // Reverted to previous value
-        const frequency = 0.07; // Reverted to previous value
+        const amplitude = 0.8;
+        const frequency = 0.07;
         fx += Math.sin(t + pt.originalX * frequency) * amplitude;
         fy += Math.cos(t + pt.originalY * frequency) * amplitude;
       }
@@ -149,9 +150,10 @@ export default function LandingPage() {
 
   const mousePressed = (p5) => {
     handleInteraction();
-    
+    if (isZooming) return;
+
     const c = hitBuffer.get(p5.mouseX, p5.mouseY);
-    if (c[3] > 0) { // Check if the click is inside the text shape (alpha > 0)
+    if (c[3] > 0) {
       let closestDist = Infinity;
       let closestPoint = null;
       for (let pt of points) {
@@ -161,7 +163,7 @@ export default function LandingPage() {
           closestPoint = pt;
         }
       }
-      
+
       if (closestPoint) {
         selectedPoint = closestPoint;
         showSelected = false;
@@ -173,47 +175,146 @@ export default function LandingPage() {
   const mouseReleased = () => {
     handleInteraction();
     draggingPoint = null;
-    // Removed navigation logic from here
   };
 
   const mouseMoved = () => {
     handleInteraction();
   }
 
+  const handleStartClick = () => {
+    setIsZooming(true);
+  };
+
+  // --- Start of Animation Logic Changes ---
+
+  const { scale } = useSpring({
+    scale: isZooming ? 50 : 1,
+    config: {
+      // 전체 애니메이션 시간을 4초로 설정
+      duration: 1700,
+      // '시작은 느리고 갈수록 빨라지는' 효과를 위해 easeInCubic 사용
+      easing: easings.easeInExpo,
+    },
+  });
+
+  // easeIn 곡선에 맞춰 White Out 시점을 재조정합니다.
+  // scale 값이 20에 도달할 때까지 원래 색을 유지하다가, 40까지 흰색으로 변합니다.
+  const backgroundColor = scale.to(
+    [1, 5, 15],
+    ['#85D0FF', '#85D0FF', '#FFFFFF']
+  );
+
+  // 글씨가 사라지는 시점도 재조정합니다.
+  // scale 값이 15에 도달할 때까지 보이다가, 35까지 점차 투명해집니다.
+  const sketchOpacity = scale.to([1, 5, 15], [1, 1, 0]);
+
+  // --- End of Animation Logic Changes ---
+
+  const menuAnimation = useSpring({
+    opacity: isZooming ? 1 : 0,
+    transform: isZooming ? 'translateY(0px)' : 'translateY(50px)',
+    config: { tension: 120, friction: 30 },
+    // 메뉴 등장 딜레이를 애니메이션 후반부로 조정
+    delay: isZooming ? 2300 : 0,
+  });
+
+  const PageSelectionMenu = () => (
+    <animated.div
+      style={{
+        ...menuAnimation,
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        textAlign: 'center',
+        zIndex: 20,
+      }}
+    >
+      <h2 style={{ color: 'white', fontFamily: "'Mungyeong-Gamhong-Apple', sans-serif", fontSize: '3rem', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+        어디로 가볼까요?
+      </h2>
+      <div style={{ marginTop: '2rem' }}>
+        <button onClick={() => navigate('/wipe')} className="menu-button">Wipe</button>
+        <button onClick={() => navigate('/grass-art')} className="menu-button">Grass Art</button>
+        <button onClick={() => navigate('/river')} className="menu-button">River</button>
+      </div>
+    </animated.div>
+  );
+
   return (
     <div style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
-      <Sketch
-        preload={preload}
-        setup={setup}
-        draw={draw}
-        windowResized={windowResized}
-        mousePressed={mousePressed}
-        mouseReleased={mouseReleased}
-        mouseMoved={mouseMoved}
-      />
-      <button
-        onClick={() => navigate('/grass-art')}
-        style={{
+      <animated.div style={{
           position: 'absolute',
-          bottom: '40px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          padding: '12px 28px',
-          fontSize: '1.5rem',
-          fontFamily: "'Mungyeong-Gamhong-Apple', sans-serif",
-          color: 'white',
-          backgroundColor: 'rgba(0, 0, 0, 0.25)',
-          border: '2px solid rgba(255, 255, 255, 0.8)',
-          borderRadius: '50px',
-          cursor: 'pointer',
-          zIndex: 10,
-          textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          transition: 'all 0.2s ease-in-out',
-        }}
-      >
-        시작하기
-      </button>
+          top: 0,
+          left: 0,
+          height: '100%',
+          width: '100%',
+          backgroundColor: backgroundColor,
+      }}>
+          <animated.div style={{
+              height: '100%',
+              width: '100%',
+              transform: scale.to(s => `scale(${s})`),
+              opacity: sketchOpacity
+          }}>
+            <Sketch
+              preload={preload}
+              setup={setup}
+              draw={draw}
+              windowResized={windowResized}
+              mousePressed={mousePressed}
+              mouseReleased={mouseReleased}
+              mouseMoved={mouseMoved}
+            />
+          </animated.div>
+      </animated.div>
+
+      {!isZooming && (
+        <button
+          onClick={handleStartClick}
+          style={{
+            position: 'absolute',
+            bottom: '40px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            padding: '12px 28px',
+            fontSize: '1.5rem',
+            fontFamily: "'Mungyeong-Gamhong-Apple', sans-serif",
+            color: 'white',
+            backgroundColor: 'rgba(0, 0, 0, 0.25)',
+            border: '2px solid rgba(255, 255, 255, 0.8)',
+            borderRadius: '50px',
+            cursor: 'pointer',
+            zIndex: 10,
+            textShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            transition: 'all 0.2s ease-in-out',
+          }}
+        >
+          시작하기
+        </button>
+      )}
+      {isZooming && <PageSelectionMenu />}
+      <style>{`
+        .menu-button {
+          margin: 0 15px;
+          padding: 15px 35px;
+          font-size: 1.8rem;
+          font-family: 'Mungyeong-Gamhong-Apple', sans-serif;
+          color: white;
+          background-color: rgba(0, 0, 0, 0.3);
+          border: 2px solid rgba(255, 255, 255, 0.9);
+          border-radius: 50px;
+          cursor: pointer;
+          text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+          box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+          transition: all 0.3s ease;
+        }
+        .menu-button:hover {
+          background-color: rgba(255, 255, 255, 0.2);
+          transform: translateY(-5px);
+        }
+      `}</style>
     </div>
   );
-} 
+}
