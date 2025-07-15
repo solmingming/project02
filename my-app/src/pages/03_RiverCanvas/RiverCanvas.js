@@ -17,8 +17,8 @@ const RIVER_WIDTH = 100;
 const RIVER_LENGTH = 380;
 const BANK_WIDTH = 100;
 const BANK_HEIGHT = 5;
-const RIVER_VOLUME = 0.1;
-const BIRD_VOLUME = 0.4;
+const RIVER_VOLUME = 0.13;
+const BIRD_VOLUME = 0.52;
 const FADE_IN_DURATION = 2;
 const FISH_BASE_SCALE = 1;
 
@@ -105,13 +105,13 @@ function BackgroundAudio({ children }) {
         const loadPromises = [
             new Promise(res => audioLoader.load('/river.mp3', buffer => { riverSound.current.setBuffer(buffer); riverSound.current.setLoop(true); riverSound.current.setVolume(0); res(); })),
             new Promise(res => audioLoader.load('/bird.mp3', buffer => { birdSound.current.setBuffer(buffer); birdSound.current.setLoop(true); birdSound.current.setVolume(0); res(); })),
-            new Promise(res => audioLoader.load('/splash.mp3', buffer => { splashSound.current.setBuffer(buffer); splashSound.current.setVolume(0.25); res(); })),
-            new Promise(res => audioLoader.load('/splash_small.mp3', buffer => { splashSmallSound.current.setBuffer(buffer); splashSmallSound.current.setVolume(0.25); res(); })),
-            new Promise(res => audioLoader.load('/splash_big.mp3', buffer => { splashBigSound.current.setBuffer(buffer); splashBigSound.current.setVolume(0.35); res(); })),
-            new Promise(res => audioLoader.load('/splash_foliage.mp3', buffer => { splashFoliageSound.current.setBuffer(buffer); splashFoliageSound.current.setVolume(0.25); res(); })),
-            new Promise(res => audioLoader.load('/splash_tiny.mp3', buffer => { splashTinySound.current.setBuffer(buffer); splashTinySound.current.setVolume(0.3); res(); })),
-            new Promise(res => audioLoader.load('/splash_xsmall.mp3', buffer => { splashXSmallSound.current.setBuffer(buffer); splashXSmallSound.current.setVolume(0.35); res(); })),
-            new Promise(res => audioLoader.load('/splash_tree.mp3', buffer => { splashTreeSound.current.setBuffer(buffer); splashTreeSound.current.setVolume(0.5); res(); })),
+            new Promise(res => audioLoader.load('/splash.mp3', buffer => { splashSound.current.setBuffer(buffer); splashSound.current.setVolume(0.325); res(); })),
+            new Promise(res => audioLoader.load('/splash_small.mp3', buffer => { splashSmallSound.current.setBuffer(buffer); splashSmallSound.current.setVolume(0.325); res(); })),
+            new Promise(res => audioLoader.load('/splash_big.mp3', buffer => { splashBigSound.current.setBuffer(buffer); splashBigSound.current.setVolume(0.455); res(); })),
+            new Promise(res => audioLoader.load('/splash_foliage.mp3', buffer => { splashFoliageSound.current.setBuffer(buffer); splashFoliageSound.current.setVolume(0.325); res(); })),
+            new Promise(res => audioLoader.load('/splash_tiny.mp3', buffer => { splashTinySound.current.setBuffer(buffer); splashTinySound.current.setVolume(0.39); res(); })),
+            new Promise(res => audioLoader.load('/splash_xsmall.mp3', buffer => { splashXSmallSound.current.setBuffer(buffer); splashXSmallSound.current.setVolume(0.455); res(); })),
+            new Promise(res => audioLoader.load('/splash_tree.mp3', buffer => { splashTreeSound.current.setBuffer(buffer); splashTreeSound.current.setVolume(0.65); res(); })),
         ];
         Promise.all(loadPromises).then(() => setAudioLoaded(true));
         return () => camera.remove(listener);
