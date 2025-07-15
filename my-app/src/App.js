@@ -13,16 +13,14 @@ function App() {
     setIsSettingsOpen(prev => !prev);
   };
 
-  const bouncingPageElement = <BouncingPage isSettingsOpen={isSettingsOpen} closeSettings={toggleSettings} />;
-
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={bouncingPageElement} />
+        <Route path="/" element={<BouncingPage />} />
 
         <Route element={<Layout onLogoClick={toggleSettings} isSettingsOpen={isSettingsOpen} closeSettings={toggleSettings} />}>
-          <Route path="/bouncing" element={bouncingPageElement} />
-          <Route path="/wipe" element={<Wipe />} />
+          <Route path="/bouncing" element={<BouncingPage isSettingsOpen={isSettingsOpen} closeSettings={toggleSettings} />} />
+          <Route path="/wipe" element={<Wipe isSettingsOpen={isSettingsOpen} closeSettings={toggleSettings} />} />
           <Route path="/grass-art" element={<GrassArt />} />
           <Route path="/river" element={<River />} />
         </Route>

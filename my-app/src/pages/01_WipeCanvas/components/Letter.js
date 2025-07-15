@@ -1,12 +1,12 @@
 import React from 'react';
 
-const Letter = ({ char, x, y, rotation }) => {
+const Letter = ({ char, x, y, rotation, fontSize }) => {
   const style = {
     position: 'absolute',
     left: `${x}px`,
     top: `${y}px`,
     transform: `rotate(${rotation}deg)`,
-    fontSize: '100px',
+    fontSize: `${fontSize}px`,
     fontWeight: 'bold',
     userSelect: 'none',
     color: '#ffffff',

@@ -56,8 +56,13 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
     setTempSettings(prev => ({ ...prev, sampleFactor: value }));
   };
 
+  const handleTextSizeChange = (e) => {
+    const value = parseFloat(e.target.value);
+    setTempSettings(prev => ({ ...prev, textSize: value }));
+  };
+
   const handleTextChangeInternal = (e) => {
-    if (e.target.value.length <= 10) {
+    if (e.target.value.length <= 20) {
       setTempSettings(prev => ({...prev, text: e.target.value}));
     }
   };
@@ -65,7 +70,7 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
   const handleTextClick = () => {
     setIsEditing(true);
   };
-  
+
   const handleTextBlur = () => {
     setIsEditing(false);
   };
@@ -82,6 +87,7 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
       damping: tempSettings.damping,
       kValue: tempSettings.kValue,
       sampleFactor: tempSettings.sampleFactor,
+      textSize: tempSettings.textSize, // textSize 저장
     });
     onTextChange(tempSettings.text);
     onClose();
@@ -96,11 +102,21 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
       onClose();
     }
   };
-  
+
   const getFontSizeForPanel = (length) => {
-    return '3rem';
-  };
-  
+  if (length <= 5) {
+    return '3rem';    // 5자 이하: 기본 크기
+  } else if (length <= 8) {
+    return '2.5rem';  // 6~8자
+  } else if (length <= 12) {
+    return '2rem';    // 9~12자
+  } else if (length <= 16) {
+    return '1.5rem';  // 13~16자
+  } else {
+    return '1rem';  // 17~20자
+  }
+};
+
   const textStyle = {
     fontSize: getFontSizeForPanel(tempSettings.text.length),
   };
@@ -139,7 +155,7 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
         <div className="settings-panel-content">
           <div className="top-section">
             <div className="gradient-preview-container">
-              <div 
+              <div
                 className="gradient-preview"
                 style={{ background: `linear-gradient(to bottom, ${tempSettings.topColor}, ${tempSettings.bottomColor})` }}
               >
@@ -170,12 +186,12 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
                     onKeyDown={handleInputKeyDown}
                     className="glitz-text-input"
                     style={textStyle}
-                    maxLength="5"
+                    maxLength="20"
                   />
                 ) : (
-                  <p 
-                    className="glitz-text" 
-                    onClick={(e) => { e.stopPropagation(); handleTextClick(); }} 
+                  <p
+                    className="glitz-text"
+                    onClick={(e) => { e.stopPropagation(); handleTextClick(); }}
                     style={textStyle}
                   >
                     {tempSettings.text || "Glitz"}
@@ -189,7 +205,7 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
               </div>
             </div>
           </div>
-          
+
           {showDetails && (
             <div className="sliders">
               <div className="slider-container">
@@ -234,10 +250,24 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
                   onChange={handleSampleFactorChange}
                 />
               </div>
+              <div className="slider-container">
+                <div className="slider-label">
+                  <label>text size</label>
+                  <span className="slider-value">{tempSettings.textSize.toFixed(2)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.1"
+                  max="0.4"
+                  step="0.01"
+                  value={tempSettings.textSize}
+                  onChange={handleTextSizeChange}
+                />
+              </div>
             </div>
           )}
         </div>
-        
+
         <div className="save-button-container">
             <img src={saveIcon} alt="Save" className="save-button" onClick={handleSave} />
         </div>

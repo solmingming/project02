@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom';
 import './GlobalHeader.css';
 
 const navItems = [
-  { path: '/river', name: 'River', previewSvg: '/assets/images/River_preview.svg', angle: 270, distance: 82 },
-  { path: '/', name: 'Waves', previewSvg: '/assets/images/Wavespreview.svg', angle: 225, distance: 90 },
-  { path: '/bouncing', name: 'Landing', previewSvg: '/assets/images/Landingpreview.svg', angle: 180, distance: 90 },
-  { path: '/grass-art', name: 'Grass Art', previewSvg: '/assets/images/Grassartpreview.svg', angle: 135, distance: 90 },
-  { path: '/wipe', name: 'Wipe', previewSvg: '/assets/images/Wipepreview.svg', angle: 90, distance: 82 },
+  { path: '/bouncing', name: 'Bouncing', previewSvg: '/assets/images/Landingpreview.svg', angle: 270, distance: 82 },
+  { path: '/wipe', name: 'Wipe', previewSvg: '/assets/images/Wipepreview.svg', angle: 225, distance: 90 },
+  { path: '/grass-art', name: 'Grass Art', previewSvg: '/assets/images/Grassartpreview.svg', angle: 180, distance: 90 },
+  { path: '/river', name: 'River', previewSvg: '/assets/images/River_preview.svg', angle: 135, distance: 90 },
+  { path: '/', name: 'Waves', previewSvg: '/assets/images/Wavespreview.svg', angle: 90, distance: 82 },
 ];
 
 const GlobalHeader = ({ onLogoClick }) => {
