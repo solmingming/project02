@@ -1,7 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Sketch from 'react-p5';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useSpring, animated, easings } from 'react-spring';
+import BouncingSettings from './BouncingSettings';
 
 let font;
 let points = [];
@@ -9,18 +10,29 @@ let draggingPoint = null;
 let selectedPoint = null;
 let showSelected = true;
 const restoreThreshold = 0.5;
-const textStr = "Glitz";
+let textStr = "Glitz";
 
-let textX, textY, dynamicFontSize;
+let textX, textY, dynamicFontSize, textBoundsW;
 let hitBuffer;
 
+let settings = {
+  damping: 0.73,
+  kValue: 0.3,
+  sampleFactor: 0.5,
+};
+
+let p5Instance = null;
+
 function initPoints(p5) {
+  if (!p5) return;
+  
   dynamicFontSize = p5.windowWidth * 0.2;
   const bounds = font.textBounds(textStr, 0, 0, dynamicFontSize);
+  textBoundsW = bounds.w;
   textX = (p5.width - bounds.w) / 2 - bounds.x;
   textY = (p5.height - bounds.h) / 2 - bounds.y;
 
-  points = font.textToPoints(textStr, textX, textY, dynamicFontSize, { sampleFactor: 1.0 });
+  points = font.textToPoints(textStr, textX, textY, dynamicFontSize, { sampleFactor: settings.sampleFactor });
   points.forEach(pt => {
     pt.originalX = pt.x;
     pt.originalY = pt.y;
@@ -31,11 +43,46 @@ function initPoints(p5) {
   });
 }
 
-export default function LandingPage() {
+const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const idleTimeout = useRef(null);
   const isIdle = useRef(false);
   const [isZooming, setIsZooming] = useState(false);
+  
+  const [appSettings, setAppSettings] = useState({
+    topColor: '#85D0FF',
+    bottomColor: '#85D0FF',
+    damping: 0.73,
+    kValue: 0.3,
+    sampleFactor: 0.25,
+    text: "Glitz"
+  });
+
+  useEffect(() => {
+    settings.damping = appSettings.damping;
+    settings.kValue = appSettings.kValue;
+    textStr = appSettings.text;
+
+    if (settings.sampleFactor !== appSettings.sampleFactor) {
+      settings.sampleFactor = appSettings.sampleFactor;
+    }
+    if (p5Instance) {
+      initPoints(p5Instance);
+    }
+  }, [appSettings]);
+
+  const handleSettingsChange = (newSettings) => {
+    setAppSettings(prev => ({ ...prev, ...newSettings }));
+  };
+  
+  const handleTextChange = (newText) => {
+    setAppSettings(prev => ({...prev, text: newText}));
+  };
+
+  const handleColorChange = (top, bottom) => {
+    setAppSettings(prev => ({ ...prev, topColor: top, bottomColor: bottom }));
+  };
 
   const resetIdleTimer = () => {
     isIdle.current = false;
@@ -44,7 +91,7 @@ export default function LandingPage() {
       if (!draggingPoint) {
         isIdle.current = true;
       }
-    }, 3000);
+    }, 10000);
   };
 
   const handleInteraction = () => {
@@ -64,13 +111,14 @@ export default function LandingPage() {
   const setup = (p5, canvasParentRef) => {
     p5.createCanvas(p5.windowWidth, p5.windowHeight).parent(canvasParentRef);
     hitBuffer = p5.createGraphics(p5.windowWidth, p5.windowHeight);
+    p5Instance = p5;
     initPoints(p5);
   };
 
   const windowResized = (p5) => {
     p5.resizeCanvas(p5.windowWidth, p5.windowHeight);
     if (hitBuffer)
-      hitBuffer.resize(p5.windowWidth, p5.windowHeight);
+      hitBuffer.resizeCanvas(p5.windowWidth, p5.windowHeight);
     initPoints(p5);
   };
 
@@ -86,8 +134,9 @@ export default function LandingPage() {
 
     p5.noStroke();
 
-    const k = 0.3;
-    const damping = 0.73;
+    const k = settings.kValue;
+    const damping = settings.damping;
+
     let dx = 0, dy = 0;
     if (draggingPoint) {
       dx = draggingPoint.x - draggingPoint.originalX;
@@ -98,7 +147,7 @@ export default function LandingPage() {
       let fx = (pt.originalX - pt.x) * k;
       let fy = (pt.originalY - pt.y) * k;
       if (draggingPoint) {
-        const influenceRadius = 800;
+        const influenceRadius = textBoundsW;
         const d0 = p5.dist(
           pt.originalX, pt.originalY,
           draggingPoint.originalX, draggingPoint.originalY
@@ -112,7 +161,7 @@ export default function LandingPage() {
 
       if (isIdle.current && !draggingPoint) {
         const t = p5.frameCount * 0.02;
-        const amplitude = 0.8;
+        const amplitude = 1.3;
         const frequency = 0.07;
         fx += Math.sin(t + pt.originalX * frequency) * amplitude;
         fy += Math.cos(t + pt.originalY * frequency) * amplitude;
@@ -148,8 +197,7 @@ export default function LandingPage() {
   };
 
   const mousePressed = (p5) => {
-    handleInteraction();
-    if (isZooming) return;
+    if (isSettingsOpen || isZooming) return;
 
     const c = hitBuffer.get(p5.mouseX, p5.mouseY);
     if (c[3] > 0) {
@@ -158,6 +206,7 @@ export default function LandingPage() {
       for (let pt of points) {
         const d = p5.dist(p5.mouseX, p5.mouseY, pt.x, pt.y);
         if (d < closestDist) {
+          handleInteraction();
           closestDist = d;
           closestPoint = pt;
         }
@@ -172,48 +221,35 @@ export default function LandingPage() {
   };
 
   const mouseReleased = () => {
+    if(!draggingPoint) return;
     handleInteraction();
     draggingPoint = null;
   };
 
-  const mouseMoved = () => {
-    handleInteraction();
-  }
-
   const handleStartClick = () => {
+    if(isSettingsOpen) return;
     setIsZooming(true);
   };
-
-  // --- Start of Animation Logic Changes ---
 
   const { scale } = useSpring({
     scale: isZooming ? 50 : 1,
     config: {
-      // 전체 애니메이션 시간을 4초로 설정
       duration: 1700,
-      // '시작은 느리고 갈수록 빨라지는' 효과를 위해 easeInCubic 사용
       easing: easings.easeInExpo,
     },
   });
-
-  // easeIn 곡선에 맞춰 White Out 시점을 재조정합니다.
-  // scale 값이 20에 도달할 때까지 원래 색을 유지하다가, 40까지 흰색으로 변합니다.
+  
   const backgroundColor = scale.to(
     [1, 5, 15],
-    ['#85D0FF', '#85D0FF', '#FFFFFF']
+    ['transparent', 'transparent', '#FFFFFF']
   );
 
-  // 글씨가 사라지는 시점도 재조정합니다.
-  // scale 값이 15에 도달할 때까지 보이다가, 35까지 점차 투명해집니다.
   const sketchOpacity = scale.to([1, 5, 15], [1, 1, 0]);
-
-  // --- End of Animation Logic Changes ---
 
   const menuAnimation = useSpring({
     opacity: isZooming ? 1 : 0,
     transform: isZooming ? 'translateY(0px)' : 'translateY(50px)',
     config: { tension: 120, friction: 30 },
-    // 메뉴 등장 딜레이를 애니메이션 후반부로 조정
     delay: isZooming ? 2300 : 0,
   });
 
@@ -241,7 +277,12 @@ export default function LandingPage() {
   );
 
   return (
-    <div style={{ position: 'relative', height: '100vh', overflow: 'hidden' }}>
+    <div style={{
+        position: 'relative',
+        height: '100vh',
+        overflow: 'hidden',
+        background: `linear-gradient(to bottom, ${appSettings.topColor}, ${appSettings.bottomColor})`,
+    }}>
       <animated.div style={{
           position: 'absolute',
           top: 0,
@@ -263,12 +304,11 @@ export default function LandingPage() {
               windowResized={windowResized}
               mousePressed={mousePressed}
               mouseReleased={mouseReleased}
-              mouseMoved={mouseMoved}
             />
           </animated.div>
       </animated.div>
 
-      {!isZooming && (
+      {location.pathname !== '/bouncing' && !isZooming && (
         <button
           onClick={handleStartClick}
           style={{
@@ -314,6 +354,17 @@ export default function LandingPage() {
           transform: translateY(-5px);
         }
       `}</style>
+
+      <BouncingSettings 
+        isOpen={isSettingsOpen} 
+        onClose={closeSettings} 
+        initialSettings={appSettings}
+        onColorChange={handleColorChange}
+        onSettingsChange={handleSettingsChange}
+        onTextChange={handleTextChange}
+      />
     </div>
   );
 }
+
+export default BouncingPage;

@@ -12,6 +12,7 @@ import React, {
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, useGLTF, useTexture, Sky, useProgress, Html } from '@react-three/drei';
+import { audioUnlocker } from '../../AudioUnlocker';
 
 const RIVER_WIDTH = 100;
 const RIVER_LENGTH = 380;
@@ -75,7 +76,7 @@ function Loader() {
 function BackgroundAudio({ children }) {
     const { camera } = useThree();
     const [audioLoaded, setAudioLoaded] = useState(false);
-    const [audioStarted, setAudioStarted] = useState(false);
+    const [audioStarted, setAudioStarted] = useState(window.__hasUserInteracted);
     const listenerRef = useRef();
     const riverSound = useRef();
     const birdSound = useRef();
@@ -91,6 +92,7 @@ function BackgroundAudio({ children }) {
         const listener = new THREE.AudioListener();
         camera.add(listener);
         listenerRef.current = listener;
+
         riverSound.current = new THREE.Audio(listener);
         birdSound.current = new THREE.Audio(listener);
         splashSound.current = new THREE.Audio(listener);
@@ -102,6 +104,7 @@ function BackgroundAudio({ children }) {
         splashTreeSound.current = new THREE.Audio(listener);
 
         const audioLoader = new THREE.AudioLoader();
+
         const loadPromises = [
             new Promise(res => audioLoader.load('/river.mp3', buffer => { riverSound.current.setBuffer(buffer); riverSound.current.setLoop(true); riverSound.current.setVolume(0); res(); })),
             new Promise(res => audioLoader.load('/bird.mp3', buffer => { birdSound.current.setBuffer(buffer); birdSound.current.setLoop(true); birdSound.current.setVolume(0); res(); })),
@@ -114,14 +117,28 @@ function BackgroundAudio({ children }) {
             new Promise(res => audioLoader.load('/splash_tree.mp3', buffer => { splashTreeSound.current.setBuffer(buffer); splashTreeSound.current.setVolume(0.65); res(); })),
         ];
         Promise.all(loadPromises).then(() => setAudioLoaded(true));
-        return () => camera.remove(listener);
+        return () => {
+            [
+                riverSound,
+                birdSound,
+                splashSound,
+                splashSmallSound,
+                splashBigSound,
+                splashFoliageSound,
+                splashTinySound,
+                splashXSmallSound,
+                splashTreeSound
+            ].forEach(ref => {
+                if (ref.current?.isPlaying) {
+                    ref.current.stop();
+                }
+            });
+            camera.remove(listenerRef.current);
+            if (listenerRef.current.context.state !== 'closed') {
+                listenerRef.current.context.close();
+            }
+        };
     }, [camera]);
-
-    useEffect(() => {
-        const handleFirstInteraction = () => { if (!audioStarted) { setAudioStarted(true); } window.removeEventListener('click', handleFirstInteraction); };
-        window.addEventListener('click', handleFirstInteraction);
-        return () => window.removeEventListener('click', handleFirstInteraction);
-    }, [audioStarted]);
 
     useEffect(() => {
         if (audioLoaded && audioStarted) {
@@ -150,15 +167,15 @@ function BackgroundAudio({ children }) {
     const playSplashXSmall = useCallback(() => playSound(splashXSmallSound), [playSound]);
     const playSplashTree = useCallback(() => playSound(splashTreeSound), [playSound]);
 
-    const audioContextValue = useMemo(() => ({ 
-        playSplash, 
+    const audioContextValue = useMemo(() => ({
+        playSplash,
         playSplashSmall,
         playSplashBig,
         playSplashFoliage,
         playSplashTiny,
         playSplashXSmall,
         playSplashTree,
-        audioLoaded 
+        audioLoaded
     }), [playSplash, playSplashSmall, playSplashBig, playSplashFoliage, playSplashTiny, playSplashXSmall, playSplashTree, audioLoaded]);
 
     return <AudioContext.Provider value={audioContextValue}>{children}</AudioContext.Provider>;
@@ -307,14 +324,14 @@ function ShimmeringWater() {
             randRef.current += (Math.random() - 0.5) * 0.2;
             RAND_TIME = 1 + Math.random() * 2;
         }
-        
+
         const velocityX = Math.sin((randRef.current - 0.5) * 2 * Math.PI) * 0.001;
         const velocityZ = delta * 0.1;
 
         ref.current.material.normalMap.offset.x += velocityX;
         ref.current.material.normalMap.offset.y -= velocityZ;
-        
-        if(waterVelocity.current) {
+
+        if (waterVelocity.current) {
             waterVelocity.current.x = velocityX;
             waterVelocity.current.z = velocityZ;
         }
@@ -371,7 +388,7 @@ function FoliageModel({ id, onOutOfBounds, model, meshName, position, scale, rot
     const timeOffset = useMemo(() => Math.random() * 100, []);
     const isRock = useMemo(() => meshName.toLowerCase().includes('rock'), [meshName]);
     const targetPosition = useMemo(() => new THREE.Vector3(), []);
-    
+
     const modelHeight = useMemo(() => {
         if (!model) return 0;
         const box = new THREE.Box3().setFromObject(model);
@@ -398,14 +415,14 @@ function FoliageModel({ id, onOutOfBounds, model, meshName, position, scale, rot
             dragState.current.offset.copy(dragState.current.intersectionPoint).sub(ref.current.position);
         }
     };
-    
+
     const handlePointerUp = (e) => {
         if (!dragState.current.isDown || e.pointerId !== dragState.current.pointerId) return;
 
         dragState.current.isDown = false;
         dragState.current.pointerId = null;
         setIsDragging(false);
-        
+
         const isInWater = Math.abs(ref.current.position.x) < RIVER_WIDTH / 2;
         if (isInWater) {
             // meshName에 따라 다른 splash 사운드 재생
@@ -445,7 +462,7 @@ function FoliageModel({ id, onOutOfBounds, model, meshName, position, scale, rot
             setIsSinking(false);
         }
     };
-    
+
     const handleLostPointerCapture = (e) => {
         if (e.pointerId === dragState.current.pointerId) {
             handlePointerUp(e);
@@ -454,7 +471,7 @@ function FoliageModel({ id, onOutOfBounds, model, meshName, position, scale, rot
 
     useFrame((state, delta) => {
         if (!ref.current) return;
-        
+
         if (dragState.current.isDown) {
             if (state.raycaster.ray.intersectPlane(dragState.current.dragPlane, dragState.current.intersectionPoint)) {
                 targetPosition.copy(dragState.current.intersectionPoint.sub(dragState.current.offset));
@@ -473,7 +490,7 @@ function FoliageModel({ id, onOutOfBounds, model, meshName, position, scale, rot
             } else {
                 ref.current.position.y = SINK_DEPTH;
             }
-         } else if (isFloating && waterVelocity.current) {
+        } else if (isFloating && waterVelocity.current) {
             ref.current.position.x += waterVelocity.current.x * 20;
             ref.current.position.z -= waterVelocity.current.z * 150;
             ref.current.position.y = Math.sin(state.clock.getElapsedTime() * 1.5 + timeOffset) * (modelHeight * 0.2) - (modelHeight * 0.7);
@@ -498,7 +515,7 @@ function FoliageModel({ id, onOutOfBounds, model, meshName, position, scale, rot
     }, [isDragging, isFloating, isSinking]);
 
     if (!model) return null;
-    
+
     return (
         <group
             ref={ref}
@@ -558,11 +575,11 @@ const Bank = React.memo(({ side }) => {
                 const box = new THREE.Box3().setFromObject(bakedGroup);
                 const center = new THREE.Vector3();
                 box.getCenter(center);
-                
+
                 if (config.draggable) {
                     bakedGroup.position.set(-center.x, -box.min.y, -center.z);
                     models[config.meshName] = bakedGroup;
-                } 
+                }
                 else if (bakedGroup.children.length > 0 && bakedGroup.children[0].isMesh) {
                     const mesh = bakedGroup.children[0];
                     const centeredGeometry = mesh.geometry.clone();
@@ -582,7 +599,6 @@ const Bank = React.memo(({ side }) => {
 
         Object.keys(FOLIAGE_CONFIG).forEach(type => {
             const config = FOLIAGE_CONFIG[type];
-            // FOLIAGE_CONFIG에서 path를 참조하지 않으므로 수정할 필요 없음
             const count = Math.floor((config.count * (BANK_WIDTH * RIVER_LENGTH) / 18000) / 2) || 1;
             if (count === 0) return;
 
@@ -593,7 +609,7 @@ const Bank = React.memo(({ side }) => {
                 const x = bankInnerEdgeX + sign * (PADDING + Math.random() * (BANK_WIDTH - PADDING * 2));
                 const z = -RIVER_LENGTH / 2 + Math.random() * RIVER_LENGTH;
                 const scaleVal = (Math.random() * 0.5 + 0.75) * config.baseScale;
-                
+
                 const itemData = {
                     id: THREE.MathUtils.generateUUID(),
                     position: [x, 0, z],
@@ -650,9 +666,9 @@ const Bank = React.memo(({ side }) => {
                 <planeGeometry args={[BANK_WIDTH, RIVER_LENGTH]} />
                 <meshStandardMaterial map={topTexture} />
             </mesh>
-            
+
             {foliageList.map((item) => (
-                <FoliageModel 
+                <FoliageModel
                     key={item.id}
                     {...item}
                     model={foliageModels[item.meshName]}
@@ -660,7 +676,7 @@ const Bank = React.memo(({ side }) => {
                     onOutOfBounds={handleFoliageOutOfBounds}
                 />
             ))}
-            
+
             {Object.keys(instancedFoliage).map(meshName => (
                 <InstancedFoliage
                     key={meshName}
@@ -675,7 +691,6 @@ const Bank = React.memo(({ side }) => {
 export default function RiverCanvas() {
     const waterVelocity = useRef({ x: 0, z: 0 });
 
-    // FOLIAGE_PATH 상수를 사용하여 preload
     useGLTF.preload(FOLIAGE_PATH);
     useGLTF.preload('/cliff.glb');
     useGLTF.preload('/fish2.glb');
@@ -688,7 +703,7 @@ export default function RiverCanvas() {
                 <Sky sunPosition={[-70, 50, 0]} />
                 <hemisphereLight skyColor={"#87ceeb"} groundColor={"#4a4a4a"} intensity={0.8} />
                 <directionalLight color={"#fffde8"} position={[-70, 50, 0]} intensity={4.5} castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048} shadow-camera-left={-RIVER_LENGTH / 1.5} shadow-camera-right={RIVER_LENGTH / 1.5} shadow-camera-top={RIVER_WIDTH} shadow-camera-bottom={-RIVER_WIDTH} shadow-camera-near={0.5} shadow-camera-far={500} />
-                
+
                 <BackgroundAudio>
                     <WaterContext.Provider value={waterVelocity}>
                         <group position={[0, 0, 66]}>
