@@ -1,5 +1,11 @@
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
 
+/* 커서 깜박임 애니메이션 정의 */
+@keyframes blink {
+  from, to { opacity: 1; }
+  50% { opacity: 0; }
+}
+
 .settings-overlay {
   position: fixed;
   top: 0;
@@ -100,7 +106,7 @@
 
 .glitz-text-container {
     width: 100%;
-    border-bottom: 1px solid #000;
+    border-bottom: 2px solid #000;
     padding-bottom: 8px;
     margin-bottom: 8px;
     margin-top: 10px;
@@ -117,7 +123,25 @@
     line-height: 1.1;
     cursor: pointer;
     text-align: center;
+    /* 가상 요소 위치의 기준이 됨 */
+    position: relative;
+    /* 텍스트 뒤에 약간의 공간 확보 */
+    padding-right: 4px;
 }
+
+/* 항상 보이는 깜박이는 커서 생성 */
+.glitz-text::after {
+    content: '';
+    position: absolute;
+    top: 10%;
+    right: 0;
+    height: 80%;
+    width: 2px;
+    background-color: #333;
+    /* 위에 정의한 blink 애니메이션 적용 */
+    animation: blink 1s step-end infinite;
+}
+
 
 .glitz-text-input {
     font-family: 'Pretendard', 'Times New Roman', Times, serif;
@@ -128,13 +152,14 @@
     text-align: center;
     width: 100%;
     border: none;
-    background-color: #f0f0f0;
-    border-radius: 4px;
+    background-color: transparent;
     font-size: 3rem;
+    /* 실제 입력창의 커서 색상도 설정 가능 */
+    caret-color: #333;
 }
 
 .glitz-text-input:focus {
-    outline: 1px solid #ccc;
+    outline: none;
 }
 
 .advanced-controls {
@@ -171,23 +196,67 @@
 
 .slider-label label {
   font-size: 0.9rem;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: 'Pretendard', sans-serif; /* Pretendard 폰트로 변경 */
   color: #333;
 }
 
 .slider-value {
     font-size: 0.9rem;
-    font-family: monospace;
+    font-family: 'Pretendard', sans-serif; /* Pretendard 폰트로 변경 */
     color: #555;
-    background-color: #f0f0f0;
+    background-color: transparent; /* 배경색 투명으로 변경 */
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 0; /* 테두리 둥글기 제거 */
+    border: none; /* 테두리 제거 */
 }
 
+/* 스크롤바(range input) 스타일링 */
 .slider-container input[type="range"] {
+  -webkit-appearance: none; /* 기본 스타일 제거 (웹킷 기반 브라우저) */
+  appearance: none;
   width: 100%;
+  height: 8px; /* 스크롤바 트랙 높이 */
+  background: #eee; /* 스크롤바 트랙 배경색 (선택되지 않은 부분) */
+  border-radius: 5px; /* 스크롤바 트랙 둥글기 */
+  outline: none; /* 포커스 시 테두리 제거 */
   cursor: pointer;
 }
+
+/* 스크롤바 핸들(thumb) 스타일링 (웹킷 기반 브라우저) */
+.slider-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; /* 기본 스타일 제거 */
+  appearance: none;
+  width: 16px; /* 핸들 너비 */
+  height: 16px; /* 핸들 높이 */
+  background: #000; /* 핸들 색상 (검은색) */
+  border-radius: 50%; /* 원형 핸들 */
+  cursor: pointer;
+}
+
+/* 스크롤바 트랙(track) 채워진 부분 스타일링 (파이어폭스) */
+.slider-container input[type="range"]::-moz-range-progress {
+  background-color: #000; /* 채워진 부분 색상 (검은색) */
+  height: 8px;
+  border-radius: 5px;
+}
+
+/* 스크롤바 핸들(thumb) 스타일링 (파이어폭스) */
+.slider-container input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #000;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 0;
+}
+
+/* 스크롤바 트랙(track) 배경 스타일링 (파이어폭스) */
+.slider-container input[type="range"]::-moz-range-track {
+    background: #000;
+    height: 8px;
+    border-radius: 5px;
+}
+
 
 .save-button-container {
     width: 100%;
