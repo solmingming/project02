@@ -82,11 +82,7 @@ export default function GrassArt() {
   useEffect(() => {
     const unmute = () => {
       const bgm = document.getElementById('bgm');
-      if (bgm) {
-        bgm.muted = false;
-        bgm.volume = 0.5;
-        bgm.play();
-      }
+      if (bgm) { bgm.muted = false; bgm.play(); }
       window.removeEventListener('click', unmute);
     };
     window.addEventListener('click', unmute);

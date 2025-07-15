@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Letter from './components/Letter';
 import Wiper from './components/Wiper';
 import '../../App.css';
+import { audioUnlocker } from '../../AudioUnlocker';
 
 const CHARS = "GLITZ";
 const LETTER_SIZE = 80;
@@ -60,15 +61,15 @@ const WipeCanvas = () => {
 
     setAudioInitialized(true);
 
-    const context = new (window.AudioContext || window.webkitAudioContext)();
-    audioContextRef.current = context;
+     const context = audioUnlocker.ctx;
+     audioContextRef.current = context;
 
     const compressor = context.createDynamicsCompressor();
-    compressor.threshold.setValueAtTime(-50, context.currentTime); // 압축 시작 임계값 (-50dB)
-    compressor.knee.setValueAtTime(40, context.currentTime);       // 압축이 부드럽게 시작되는 범위
-    compressor.ratio.setValueAtTime(12, context.currentTime);      // 압축 비율
-    compressor.attack.setValueAtTime(0, context.currentTime);      // 압축 시작 속도 (0에 가깝게)
-    compressor.release.setValueAtTime(0.25, context.currentTime);  // 압축 해제 속도
+    compressor.threshold.setValueAtTime(-50, context.currentTime);
+    compressor.knee.setValueAtTime(40, context.currentTime);
+    compressor.ratio.setValueAtTime(12, context.currentTime);
+    compressor.attack.setValueAtTime(0, context.currentTime);
+    compressor.release.setValueAtTime(0.25, context.currentTime);
     
     compressor.connect(context.destination);
     compressorRef.current = compressor;
@@ -97,9 +98,7 @@ const WipeCanvas = () => {
   };
 
   useEffect(() => {
-    return () => {
-      audioContextRef.current?.close();
-    }
+    if (window.__hasUserInteracted) initAudio();
   }, []);
 
   const playCollisionSound = () => {
