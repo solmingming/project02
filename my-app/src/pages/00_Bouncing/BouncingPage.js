@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useSpring, animated, easings } from 'react-spring';
 import BouncingSettings from './BouncingSettings';
 
+// 전역 변수로 p5.js 관련 상태 관리
 let font;
 let points = [];
 let draggingPoint = null;
@@ -15,27 +16,37 @@ let textStr = "Glitz";
 let textX, textY, dynamicFontSize, textBoundsW;
 let hitBuffer;
 
+// p5 스케치 외부에서 제어할 설정 객체
 let settings = {
   damping: 0.73,
   kValue: 0.3,
   sampleFactor: 0.5,
+  textSize: 0.2,
 };
 
+// p5 인스턴스를 저장할 전역 변수
 let p5Instance = null;
+// p5 캔버스가 준비되었는지 확인하는 플래그
+let isp5CanvasReady = false;
 
+// 점들을 초기화하는 함수
 function initPoints(p5) {
-  if (!p5) return;
-  
-  dynamicFontSize = p5.windowWidth * 0.2;
+  // p5 캔버스가 준비되지 않았거나 폰트가 로드되지 않았으면 중단
+  if (!isp5CanvasReady || !font) return;
+
+  // 윈도우 크기와 textSize 설정에 따라 동적으로 폰트 크기 계산
+  dynamicFontSize = p5.windowWidth * settings.textSize;
   const bounds = font.textBounds(textStr, 0, 0, dynamicFontSize);
   textBoundsW = bounds.w;
   textX = (p5.width - bounds.w) / 2 - bounds.x;
   textY = (p5.height - bounds.h) / 2 - bounds.y;
 
+  // 텍스트를 점들로 변환
   points = font.textToPoints(textStr, textX, textY, dynamicFontSize, { sampleFactor: settings.sampleFactor });
   points.forEach(pt => {
     pt.originalX = pt.x;
     pt.originalY = pt.y;
+    // 점들의 초기 위치를 무작위로 설정
     pt.x = p5.width / 2 + p5.random(-50, 50);
     pt.y = p5.height / 2 + p5.random(-50, 50);
     pt.vx = p5.random(-5, 5);
@@ -49,33 +60,44 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
   const idleTimeout = useRef(null);
   const isIdle = useRef(false);
   const [isZooming, setIsZooming] = useState(false);
-  
+
   const [appSettings, setAppSettings] = useState({
     topColor: '#85D0FF',
     bottomColor: '#85D0FF',
     damping: 0.73,
     kValue: 0.3,
     sampleFactor: 0.25,
-    text: "Glitz"
+    text: "Glitz",
+    textSize: 0.2,
   });
 
+  // 설정 변경 감지 useEffect
   useEffect(() => {
+    // p5 인스턴스와 캔버스가 준비되지 않았으면 아무 작업도 하지 않음
+    if (!p5Instance || !isp5CanvasReady) return;
+
+    const needsReinit = textStr !== appSettings.text ||
+                        settings.sampleFactor !== appSettings.sampleFactor ||
+                        settings.textSize !== appSettings.textSize;
+
     settings.damping = appSettings.damping;
     settings.kValue = appSettings.kValue;
-    textStr = appSettings.text;
-
-    if (settings.sampleFactor !== appSettings.sampleFactor) {
+    settings.textSize = appSettings.textSize;
+    
+    if (needsReinit) {
+      textStr = appSettings.text;
       settings.sampleFactor = appSettings.sampleFactor;
-    }
-    if (p5Instance) {
+      // p5의 루프 안에서 안전하게 초기화를 다시 수행하도록 요청
+      p5Instance.loop(); // 혹시 멈췄을 경우를 대비해 루프를 다시 시작
       initPoints(p5Instance);
     }
   }, [appSettings]);
 
+
   const handleSettingsChange = (newSettings) => {
     setAppSettings(prev => ({ ...prev, ...newSettings }));
   };
-  
+
   const handleTextChange = (newText) => {
     setAppSettings(prev => ({...prev, text: newText}));
   };
@@ -101,30 +123,43 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
 
   useEffect(() => {
     resetIdleTimer();
-    return () => clearTimeout(idleTimeout.current);
+    // 컴포넌트 언마운트 시 p5 관련 상태 초기화
+    return () => {
+      clearTimeout(idleTimeout.current);
+      p5Instance = null;
+      isp5CanvasReady = false;
+      points = [];
+    };
   }, []);
 
+  // p5: 폰트 미리 로드
   const preload = (p5) => {
     font = p5.loadFont("/assets/fonts/Mungyeong-Gamhong-Apple.otf");
   };
 
+  // p5: 초기 설정
   const setup = (p5, canvasParentRef) => {
     p5.createCanvas(p5.windowWidth, p5.windowHeight).parent(canvasParentRef);
     hitBuffer = p5.createGraphics(p5.windowWidth, p5.windowHeight);
-    p5Instance = p5;
-    initPoints(p5);
+    p5Instance = p5; // p5 인스턴스 할당
+    isp5CanvasReady = true; // 캔버스가 준비되었음을 명시
+    initPoints(p5); // 캔버스와 컨텍스트가 보장된 후 점 초기화
   };
 
+  // p5: 윈도우 크기 변경 시
   const windowResized = (p5) => {
     p5.resizeCanvas(p5.windowWidth, p5.windowHeight);
-    if (hitBuffer)
+    if (hitBuffer) {
       hitBuffer.resizeCanvas(p5.windowWidth, p5.windowHeight);
+    }
     initPoints(p5);
   };
 
+  // ... (draw, mousePressed, mouseReleased 등 나머지 코드는 동일)
   const draw = (p5) => {
     p5.clear();
 
+    // 마우스 감지를 위한 버퍼
     hitBuffer.clear();
     hitBuffer.textFont(font);
     hitBuffer.textSize(dynamicFontSize);
@@ -143,6 +178,7 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
       dy = draggingPoint.y - draggingPoint.originalY;
     }
 
+    // 물리 시뮬레이션
     for (let pt of points) {
       let fx = (pt.originalX - pt.x) * k;
       let fy = (pt.originalY - pt.y) * k;
@@ -200,7 +236,7 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
     if (isSettingsOpen || isZooming) return;
 
     const c = hitBuffer.get(p5.mouseX, p5.mouseY);
-    if (c[3] > 0) {
+    if (c[3] > 0) { // 텍스트 영역 클릭 감지
       let closestDist = Infinity;
       let closestPoint = null;
       for (let pt of points) {
@@ -225,7 +261,7 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
     handleInteraction();
     draggingPoint = null;
   };
-
+  // ... (나머지 JSX 부분은 동일)
   const handleStartClick = () => {
     if(isSettingsOpen) return;
     setIsZooming(true);
@@ -238,7 +274,7 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
       easing: easings.easeInExpo,
     },
   });
-  
+
   const backgroundColor = scale.to(
     [1, 5, 15],
     ['transparent', 'transparent', '#FFFFFF']
@@ -275,7 +311,7 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
       </div>
     </animated.div>
   );
-
+  
   return (
     <div style={{
         position: 'relative',
@@ -355,9 +391,9 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
         }
       `}</style>
 
-      <BouncingSettings 
-        isOpen={isSettingsOpen} 
-        onClose={closeSettings} 
+      <BouncingSettings
+        isOpen={isSettingsOpen}
+        onClose={closeSettings}
         initialSettings={appSettings}
         onColorChange={handleColorChange}
         onSettingsChange={handleSettingsChange}
@@ -365,6 +401,6 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
       />
     </div>
   );
-}
+};
 
 export default BouncingPage;

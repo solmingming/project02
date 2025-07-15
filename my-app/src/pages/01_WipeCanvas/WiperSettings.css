@@ -1,0 +1,272 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+@keyframes blink {
+  from, to { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.settings-panel {
+  background-color: white;
+  padding: 25px;
+  border-radius: 15px;
+  width: 420px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.settings-panel-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-section {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+.settings-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.main-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1;
+    min-height: 120px;
+}
+
+.gradient-preview-container {
+  position: relative;
+  width: 80px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.gradient-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.color-area {
+    flex: 1;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+}
+
+.color-area:hover {
+    filter: brightness(1.1);
+}
+
+.color-picker-wrapper {
+  position: absolute;
+  left: 95px;
+  z-index: 1001;
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.color-picker-wrapper.top {
+    top: 0;
+}
+
+.color-picker-wrapper.bottom {
+    top: auto;
+    bottom: 0;
+}
+
+.glitz-text-container {
+    width: 100%;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70px;
+}
+
+.glitz-text {
+    font-family: 'Pretendard', 'Times New Roman', Times, serif;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.1;
+    cursor: pointer;
+    text-align: center;
+    position: relative;
+    padding-right: 4px;
+}
+
+.glitz-text::after {
+    content: '';
+    position: absolute;
+    top: 10%;
+    right: 0;
+    height: 80%;
+    width: 2px;
+    background-color: #333;
+    animation: blink 1s step-end infinite;
+}
+
+
+.glitz-text-input {
+    font-family: 'Pretendard', 'Times New Roman', Times, serif;
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+    line-height: 1.1;
+    text-align: center;
+    width: 100%;
+    border: none;
+    background-color: transparent;
+    font-size: 3rem;
+    caret-color: #333;
+}
+
+.glitz-text-input:focus {
+    outline: none;
+}
+
+.advanced-controls {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    width: 100%;
+}
+
+.advanced-settings-toggle {
+  cursor: pointer;
+  color: #555;
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.sliders {
+  width: 100%;
+  margin-top: 20px;
+  border-top: 1px solid #eee;
+  padding-top: 20px;
+}
+
+.slider-container {
+  margin-bottom: 15px;
+}
+
+.slider-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.slider-label label {
+  font-size: 0.9rem;
+  font-family: 'Pretendard', sans-serif;
+  color: #333;
+}
+
+.slider-value {
+    font-size: 0.9rem;
+    font-family: 'Pretendard', sans-serif;
+    color: #555;
+    background-color: transparent;
+    padding: 2px 6px;
+    border-radius: 0;
+    border: none;
+}
+
+.slider-container input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 8px; /* 스크롤바 트랙 높이 */
+  background: #eee; /* 스크롤바 트랙 배경색 (선택되지 않은 부분) */
+  border-radius: 5px; /* 스크롤바 트랙 둥글기 */
+  outline: none; /* 포커스 시 테두리 제거 */
+  cursor: pointer;
+}
+
+.slider-container input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; /* 기본 스타일 제거 */
+  appearance: none;
+  width: 16px; /* 핸들 너비 */
+  height: 16px; /* 핸들 높이 */
+  background: #000; /* 핸들 색상 (검은색) */
+  border-radius: 50%; /* 원형 핸들 */
+  cursor: pointer;
+}
+
+/* 스크롤바 트랙(track) 채워진 부분 스타일링 (파이어폭스) */
+.slider-container input[type="range"]::-moz-range-progress {
+  background-color: #000; /* 채워진 부분 색상 (검은색) */
+  height: 8px;
+  border-radius: 5px;
+}
+
+/* 스크롤바 핸들(thumb) 스타일링 (파이어폭스) */
+.slider-container input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #000;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 0;
+}
+
+/* 스크롤바 트랙(track) 배경 스타일링 (파이어폭스) */
+.slider-container input[type="range"]::-moz-range-track {
+    background: #000;
+    height: 8px;
+    border-radius: 5px;
+}
+
+
+.save-button-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.save-button {
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.save-button:hover {
+    transform: scale(1.1);
+    filter: brightness(0.9);
+}
