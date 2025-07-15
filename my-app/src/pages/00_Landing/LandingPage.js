@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import Sketch from 'react-p5';
 import { useNavigate } from 'react-router-dom';
-// easings를 import합니다.
 import { useSpring, animated, easings } from 'react-spring';
 
 let font;
