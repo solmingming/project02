@@ -30,12 +30,21 @@ app.use(express.json());
 // 라우터 파일들을 불러옵니다.
 const bouncingRoutes = require('./routes/bouncing');
 const wipeRoutes = require('./routes/wipe');
-const grassRoutes = require('./routes/grass');
+const grassRoutes = require('./routes/grass-art');
+const riverRoutes = require('./routes/river');
+const universeRoutes = require('./routes/universe');
 
 // 각 API 경로와 라우터 파일을 연결합니다.
 app.use('/api/bouncing', bouncingRoutes);
 app.use('/api/wipe', wipeRoutes);
 app.use('/api/grass', grassRoutes);
+app.use('/api/river', riverRoutes);
+app.use('/api/universe', universeRoutes);
+
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // =======================================================
 
@@ -46,8 +55,7 @@ const PORT = process.env.PORT || 5001; // .env 파일의 PORT 값을 사용하�
 const mongoUri =
   process.env.MONGO_URL        // Railway 기본
   || process.env.MONGO_URI     // 로컬 .env
-  || process.env.RAILWAY_MONGO_URL // (예비) 다른 플러그인 이름
-  || 'mongodb://mongo:SiLnySkpCSzuWENkSgDLgTQbWwWxXDIG@mongodb.railway.internal:27017';
+  || process.env.RAILWAY_MONGO_URL; // (예비) 다른 플러그인 이름
 
 mongoose.connect(mongoUri)
   .then(() => {

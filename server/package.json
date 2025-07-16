@@ -8,7 +8,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "build-client": "npm run build --prefix ../client",
+    "postinstall": "npm run build-client && rm -rf public && cp -R ../client/build ./public"
   },
   "keywords": [],
   "author": "",
