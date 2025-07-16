@@ -2,8 +2,6 @@
   "dependencies": {
     "react-p5": "^1.4.1",
     "react-spring": "^10.0.1"
-<<<<<<< HEAD
-=======
   },
   "name": "glitz",
   "version": "1.0.0",
@@ -28,6 +26,5 @@
   "homepage": "https://github.com/solmingming/project02#readme",
   "devDependencies": {
     "concurrently": "^9.2.0"
->>>>>>> origin/solmin5
   }
 }
