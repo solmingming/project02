@@ -1,24 +1,31 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/pages/02_GrassArtCanvas/GrassArt.js
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Sketch from 'react-p5';
 import GrassSettings from './GrassSettings';
-import FlowerPage from './FlowerPage';
+import { getLatestGrass, getGrassSettingsByEmail, saveGrassSettings } from '../../api';
+import { useAuth } from '../../AuthContext';
 
 let leafImage;
 let overlayImage;
 
 const deltaConst = 1;
 
+const defaultSettings = {
+  topColor: '#BBFFD9',
+  bottomColor: '#D6EFFF',
+  text: "Glitz",
+};
+
 export default function GrassArt({ isSettingsOpen, closeSettings }) {
-  const [showFlowerPage, setShowFlowerPage] = useState(false);
   const [shapes, setShapes] = useState([]);
   const [isP5Setup, setIsP5Setup] = useState(false);
-  const imageAspectRatio = useRef(1);
-  const [appSettings, setAppSettings] = useState({
-    topColor: '#BBFFD9',
-    bottomColor: '#D6EFFF',
-    text: "Glitz",
-  });
+  
+  const { user, loading: authLoading } = useAuth();
+  const [appSettings, setAppSettings] = useState(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
 
+  const imageAspectRatio = useRef(1);
   const appSettingsRef = useRef(appSettings);
   const virtualScrollY = useRef(0);
   const deltaRGB = useRef({ r: 0, g: 0, b: 0 });
@@ -41,6 +48,47 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
   ];
 
   useEffect(() => {
+    if (authLoading) return;
+
+    const fetchInitialSettings = async () => {
+        setIsLoading(true);
+        let dataFromDB = null;
+
+        if (user) {
+            dataFromDB = await getGrassSettingsByEmail(user.email);
+        }
+
+        if (!dataFromDB) {
+            dataFromDB = await getLatestGrass();
+        }
+
+        if (dataFromDB) {
+            setAppSettings(prev => ({ ...prev, ...dataFromDB }));
+        }
+
+        setIsLoading(false);
+    };
+    fetchInitialSettings();
+  }, [user, authLoading]);
+
+  const handleSettingsUpdate = useCallback((newSettings) => {
+      const updatedSettings = { ...appSettings, ...newSettings };
+      setAppSettings(updatedSettings);
+
+      if (user) {
+          saveGrassSettings({ ...updatedSettings, email: user.email });
+      }
+  }, [user, appSettings]);
+
+  const handleColorChange = (top, bottom) => {
+      handleSettingsUpdate({ topColor: top, bottomColor: bottom });
+  };
+  
+  const handleTextChange = (newText) => {
+      handleSettingsUpdate({ text: newText });
+  };
+
+  useEffect(() => {
     appSettingsRef.current = appSettings;
   }, [appSettings]);
 
@@ -59,7 +107,7 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
   useEffect(() => {
     const unmute = () => {
       const bgm = document.getElementById('bgm');
-      if (bgm) { bgm.muted = false; bgm.play(); }
+      if (bgm) { bgm.muted = false; bgm.play().catch(e=>console.error("Audio play error:", e)); }
       window.removeEventListener('click', unmute);
     };
     window.addEventListener('click', unmute);
@@ -84,7 +132,8 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
 
   useEffect(() => {
     if (!isP5Setup) return;
-    const count = appSettings.text.length;
+    const textToUse = appSettings.text || "Glitz";
+    const count = textToUse.length;
     const colors = ['#67B473', '#599C63', '#69C377'];
     const newShapes = [];
     const baseY = 0.5, offsetY = 0.1, yJitter = 0.015;
@@ -116,14 +165,6 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
     overlayImage = p5.loadImage('/assets/images/MainFlower.png');
   };
 
-  const handleTextChange = (newText) => {
-    setAppSettings(prev => ({ ...prev, text: newText }));
-  };
-
-  const handleColorChange = (top, bottom) => {
-    setAppSettings(prev => ({ ...prev, topColor: top, bottomColor: bottom }));
-  };
-
   const setupCanvas = (p5, parentRef) => {
     canvasW.current = p5.windowWidth;
     canvasH.current = p5.windowHeight;
@@ -142,7 +183,6 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
   };
 
   const mousePressed = p5 => {
-    let shouldShowFlowerPage = false;
 
     for (let i = 0; i < shapes.length; i++) {
       const s = shapes[i];
@@ -161,9 +201,6 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
 
           if (p5.mouseX > bx - w / 2 && p5.mouseX < bx + w / 2 &&
             p5.mouseY > flowerYPos - flowerHeight / 2 && p5.mouseY < flowerYPos + flowerHeight / 2) {
-
-            shouldShowFlowerPage = true;
-
           } else {
             delete activeFlowers.current[i];
           }
@@ -196,9 +233,6 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
       }
     }
 
-    if (shouldShowFlowerPage) {
-      setShowFlowerPage(true);
-    }
   };
 
   const mouseDragged = p5 => {
@@ -212,28 +246,25 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
 
     p5.clear();
     p5.noStroke();
-
     p5.colorMode(p5.RGB, 255);
 
     const progress = currentScrollY / canvasH.current;
-
-    const curTop = p5.color(appSettings.topColor);
-    const curBot = p5.color(appSettings.bottomColor);
+    const curTop = p5.color(appSettingsRef.current.topColor);
+    const curBot = p5.color(appSettingsRef.current.bottomColor);
 
     let TopR = (curTop.levels[0] + deltaRGB.current.r * progress + 512) % 512;
     let TopG = (curTop.levels[1] + deltaRGB.current.g * progress + 512) % 512;
     let TopB = (curTop.levels[2] + deltaRGB.current.b * progress + 512) % 512;
-
     let BottomR = (curBot.levels[0] + deltaRGB.current.r * progress + 512) % 512;
     let BottomG = (curBot.levels[1] + deltaRGB.current.g * progress + 512) % 512;
     let BottomB = (curBot.levels[2] + deltaRGB.current.b * progress + 512) % 512;
 
-    if (TopR >= 256) TopR = 512 - TopR;
-    if (TopG >= 256) TopG = 512 - TopG;
-    if (TopB >= 256) TopB = 512 - TopB;
-    if (BottomR >= 256) BottomR = 512 - BottomR;
-    if (BottomG >= 256) BottomG = 512 - BottomG;
-    if (BottomB >= 256) BottomB = 512 - BottomB;
+    TopR = TopR >= 256 ? 512 - TopR : TopR;
+    TopG = TopG >= 256 ? 512 - TopG : TopG;
+    TopB = TopB >= 256 ? 512 - TopB : TopB;
+    BottomR = BottomR >= 256 ? 512 - BottomR : BottomR;
+    BottomG = BottomG >= 256 ? 512 - BottomG : BottomG;
+    BottomB = BottomB >= 256 ? 512 - BottomB : BottomB;
 
     const top = p5.color(TopR, TopG, TopB);
     const bottom = p5.color(BottomR, BottomG, BottomB);
@@ -278,14 +309,12 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
       }
       const yPos = by + bOff;
 
-      // 1. 연잎 그리기
       p5.push();
       p5.imageMode(p5.CENTER);
       p5.tint(s.color);
       p5.image(leafImage, bx, yPos, w, h);
       p5.pop();
 
-      // 2. 꽃 그리기 (활성화된 경우)
       const flowerInfo = activeFlowers.current[i];
       if (flowerInfo) {
         const flowerImg = overlayImage;
@@ -305,7 +334,8 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
 
       textWaves.current.forEach(evt => {
         if (evt.shapeIdx !== i) return;
-        const letter = appSettingsRef.current.text[evt.letterIdx]; if (!letter) return;
+        const textToUse = appSettingsRef.current.text || "Glitz";
+        const letter = textToUse[evt.letterIdx]; if (!letter) return;
         const elapsed = p5.frameCount - evt.startFrame;
         const prog = Math.min(elapsed / 45, 1);
         const alpha = (1 - Math.pow(1 - prog, 3)) * 255;
@@ -327,12 +357,13 @@ export default function GrassArt({ isSettingsOpen, closeSettings }) {
 
     p5.pop();
   };
-  const handleBackFromFlowerPage = () => {
-    setShowFlowerPage(false);
-  };
 
-  if (showFlowerPage) {
-    return <FlowerPage onBack={handleBackFromFlowerPage} />;
+  if (isLoading || authLoading) {
+    return (
+      <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#1c1c1c' }}>
+        <p style={{ color: 'white', fontSize: '2rem', fontFamily: 'sans-serif' }}>Loading Settings...</p>
+      </div>
+    );
   }
 
   return (

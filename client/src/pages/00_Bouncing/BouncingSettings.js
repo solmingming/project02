@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-
-
 import { HexColorPicker } from 'react-colorful';
 import './BouncingSettings.css';
 
-import { createBouncing } from '../../api'; 
+// ✅ 1. API 직접 호출이 더 이상 필요 없으므로 import 문을 제거합니다.
+// import { createBouncing } from '../../api'; 
 
 const saveIcon = process.env.PUBLIC_URL + '/save.svg';
 
@@ -85,27 +84,12 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
     }
   };
 
-  const handleSave = async () => {
-    onColorChange(tempSettings.topColor, tempSettings.bottomColor);
-    onSettingsChange({
-      damping: tempSettings.damping,
-      kValue: tempSettings.kValue,
-      sampleFactor: tempSettings.sampleFactor,
-      textSize: tempSettings.textSize,
-    });
-    onTextChange(tempSettings.text);
-    
-        // ✅ 3. 백엔드에 데이터를 저장하는 API 호출
-      try {
-    // 2. 백엔드로 데이터 전송!
-    // tempSettings state에 사용자가 변경한 모든 값이 들어있습니다.
-    const response = await createBouncing(tempSettings);
-
-    // 3. 성공 피드백
-    console.log('🎉 서버 저장 성공!', response.data);
-    alert('성공적으로 저장되었습니다.');
-
-    // 4. 성공 시, 부모 컴포넌트(BouncingPage)의 상태도 업데이트
+  // ✅ 2. handleSave 함수를 대폭 수정합니다.
+  // 이제 이 함수는 async일 필요가 없으며, API 호출 로직 전체를 제거합니다.
+  const handleSave = () => {
+    // 1. 부모 컴포넌트(BouncingPage)에 변경된 사항을 전달합니다.
+    // 이 함수들이 호출되면, BouncingPage의 state가 변경되고,
+    // BouncingPage의 로직에 따라 DB 저장이 트리거됩니다.
     onColorChange(tempSettings.topColor, tempSettings.bottomColor);
     onSettingsChange({
       damping: tempSettings.damping,
@@ -115,18 +99,9 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
     });
     onTextChange(tempSettings.text);
 
-    // 5. 설정 패널 닫기
+    // 2. 모든 변경사항을 부모에게 전달한 후, 설정 패널을 닫습니다.
     onClose();
-
-  } catch (error) {
-    // 6. 실패 피드백
-    console.error('🔥 서버 저장 실패!', error);
-    alert('저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
-  } finally {
-    // 7. (선택사항) 로딩 상태 종료
-    // 예: setIsLoading(false);
-  }
-};
+  };
 
 
   const handleClose = () => {
@@ -140,18 +115,12 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
   };
 
   const getFontSizeForPanel = (length) => {
-  if (length <= 5) {
-    return '3rem';    // 5자 이하: 기본 크기
-  } else if (length <= 8) {
-    return '2.5rem';  // 6~8자
-  } else if (length <= 12) {
-    return '2rem';    // 9~12자
-  } else if (length <= 16) {
-    return '1.5rem';  // 13~16자
-  } else {
-    return '1rem';  // 17~20자
-  }
-};
+    if (length <= 5) return '3rem';
+    if (length <= 8) return '2.5rem';
+    if (length <= 12) return '2rem';
+    if (length <= 16) return '1.5rem';
+    return '1rem';
+  };
 
   const textStyle = {
     fontSize: getFontSizeForPanel(tempSettings.text.length),
@@ -189,6 +158,7 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
     <div className="settings-overlay" onClick={handleOverlayClick}>
       <div className="settings-panel" onClick={(e) => { e.stopPropagation(); handlePanelClick(); }}>
         <div className="settings-panel-content">
+          {/* ... 나머지 JSX는 변경할 필요 없음 ... */}
           <div className="top-section">
             <div className="gradient-preview-container">
               <div

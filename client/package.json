@@ -31,6 +31,7 @@
     "webfontloader": "^1.6.28"
   },
   "scripts": {
+    "prebuild": "chmod +x node_modules/.bin/react-scripts",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
