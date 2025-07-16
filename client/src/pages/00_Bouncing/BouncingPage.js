@@ -3,7 +3,8 @@ import Sketch from 'react-p5';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSpring, animated, easings } from 'react-spring';
 import BouncingSettings from './BouncingSettings';
-import { getLatestBouncing } from '../../api';
+import { getLatestBouncing, getBouncingSettingsByEmail, saveBouncingSettings } from '../../api'; 
+import { useAuth } from '../../AuthContext';
 
 
 // 전역 변수로 p5.js 관련 상태 관리
@@ -68,16 +69,36 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
   const isIdle = useRef(false);
   const [isZooming, setIsZooming] = useState(false);
 
+  const { user, loading: authLoading } = useAuth();
+
   const [appSettings, setAppSettings] = useState(defaultSettings);
   const [isLoading, setIsLoading] = useState(true);
 
+  // ✅ 설정 로딩 로직을 수정합니다.
   useEffect(() => {
+    // 인증 상태 확인이 끝나기 전까지는 로딩을 진행하지 않습니다.
+    if (authLoading) {
+      return;
+    }
+
     const fetchInitialSettings = async () => {
       setIsLoading(true);
-      const dataFromDB = await getLatestBouncing();
+      let dataFromDB = null;
 
+      // 1. 로그인 상태인 경우, 이메일로 사용자별 설정을 가져옵니다.
+      if (user) {
+        console.log(`[Auth] 로그인된 사용자(${user.email})의 설정을 가져옵니다.`);
+        dataFromDB = await getBouncingSettingsByEmail(user.email);
+      }
+      
+      // 2. 사용자별 설정이 없거나, 비로그인 상태인 경우, 최신 공용 설정을 가져옵니다.
+      if (!dataFromDB) {
+        console.log("[Auth] 비로그인 상태 또는 사용자 설정이 없어 공용 최신 설정을 가져옵니다.");
+        dataFromDB = await getLatestBouncing();
+      }
+
+      // 3. DB에서 가져온 데이터가 있으면 적용하고, 없으면 기본값을 유지합니다.
       if (dataFromDB) {
-        // ✅ FIX: DB에서 받은 데이터 필드명(topColor, bottomColor)을 올바르게 매핑합니다.
         setAppSettings({
           topColor: dataFromDB.topColor,
           bottomColor: dataFromDB.bottomColor,
@@ -87,14 +108,18 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
           sampleFactor: dataFromDB.sampleFactor,
           textSize: dataFromDB.textSize,
         });
+      } else {
+        console.log("[Auth] DB에서 어떠한 설정도 가져오지 못했습니다. 기본 설정을 사용합니다.");
+        // 기본 설정은 이미 useState의 초기값으로 설정되어 있으므로 별도 처리가 필요 없습니다.
       }
       setIsLoading(false);
     };
     
     fetchInitialSettings();
-  }, []);
+  }, [user, authLoading]); // user나 authLoading 상태가 변경될 때 다시 실행됩니다.
 
-
+  
+  // ✅ p5.js 관련 로직은 appSettings에 의존하므로 그대로 작동합니다.
   useEffect(() => {
     if (!p5Instance || !isp5CanvasReady) return;
     const needsReinit = textStr !== appSettings.text ||
@@ -111,6 +136,18 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
     }
   }, [appSettings]);
 
+
+  // ✅ 설정 변경 핸들러를 수정하여 DB 저장을 시도하도록 합니다.
+  const handleSettingsUpdate = useCallback((newSettings) => {
+    // 1. 로컬 UI 즉시 업데이트
+    setAppSettings(prev => ({ ...prev, ...newSettings }));
+
+    // 2. 로그인 상태이면 DB에 저장 시도
+    if (user) {
+      // email을 포함하여 저장 함수 호출
+      saveBouncingSettings({ ...appSettings, ...newSettings, email: user.email });
+    }
+  }, [user, appSettings]); // user와 appSettings가 변경될 때 함수를 재생성
 
   const handleSettingsChange = (newSettings) => {
     setAppSettings(prev => ({ ...prev, ...newSettings }));
@@ -288,7 +325,7 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
 
   const sketchOpacity = scale.to([1, 5, 15], [1, 1, 0]);
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#1c1c1c' }}>
         <p style={{ color: 'white', fontSize: '2rem', fontFamily: 'sans-serif' }}>Loading Settings...</p>

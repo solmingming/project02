@@ -1,7 +1,9 @@
+// src/pages/04_Universe/UniversePage.js
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Stage, Layer, Line } from 'react-konva';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../AuthContext'; // ★ 수정됨
+import { useAuth } from '../../AuthContext';
 import io from 'socket.io-client';
 import './UniversePage.css';
 
@@ -9,11 +11,10 @@ const SOCKET_SERVER_URL = process.env.REACT_APP_API_URL;
 
 const UniversePage = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth(); // ★ loading 상태 가져오기
+  const { user, loading } = useAuth();
+  
   const containerRef = useRef(null);
   const stageRef = useRef(null);
-
-  // ... (다른 상태들은 그대로)
   const [stagePos, setStagePos] = useState({ x: 0, y: 0 });
   const [stageScale, setStageScale] = useState(1.5);
   const [lines, setLines] = useState([]);
@@ -23,25 +24,21 @@ const UniversePage = () => {
   const isDrawing = useRef(false);
   const isPanning = useRef(false);
   const lastPanPoint = useRef({ x: 0, y: 0 });
-
   const socket = useRef(null);
 
-
   useEffect(() => {
-    // ★ 로딩 중일 때는 아무것도 하지 않고 반환
     if (loading) {
       return;
     }
 
-    // ★ 로딩이 끝났는데 user가 없으면 로그인 페이지로 이동
     if (!user) {
-      alert('로그인이 필요합니다!');
+      alert('이 공간은 로그인이 필요합니다!');
       navigate('/');
       return;
     }
 
-    // 이 아래 로직은 user가 확실히 존재할 때만 실행됨
     socket.current = io(SOCKET_SERVER_URL);
+
     socket.current.emit('user_login', { userId: user.googleId });
 
     socket.current.on('initial_data', (data) => {
@@ -56,7 +53,9 @@ const UniversePage = () => {
 
     const container = containerRef.current;
     const handleContextMenu = (e) => e.preventDefault();
-    container.addEventListener('contextmenu', handleContextMenu);
+    if (container) {
+        container.addEventListener('contextmenu', handleContextMenu);
+    }
 
     return () => {
       if (socket.current) {
@@ -66,7 +65,7 @@ const UniversePage = () => {
           container.removeEventListener('contextmenu', handleContextMenu);
       }
     };
-  }, [user, loading, navigate]); // ★ useEffect 의존성 배열에 loading 추가
+  }, [user, loading, navigate]);
 
   const getRelativePointerPosition = () => {
     const stage = stageRef.current;
@@ -74,7 +73,6 @@ const UniversePage = () => {
 
     const pointer = stage.getPointerPosition();
     const transform = stage.getAbsoluteTransform().copy();
-    // transform을 역으로 계산하여 화면 좌표를 캔버스 내부 좌표로 변환
     transform.invert();
     return transform.point(pointer);
   };
@@ -82,7 +80,7 @@ const UniversePage = () => {
   const handleWheel = (e) => {
     e.evt.preventDefault();
     const scaleBy = 1.05;
-    const stage = stageRef.current; // e.target 대신 ref 사용
+    const stage = stageRef.current;
     const oldScale = stage.scaleX();
     const pointer = stage.getPointerPosition();
 
@@ -136,11 +134,10 @@ const UniversePage = () => {
       }
 
       lastLine.points = lastLine.points.concat([point.x, point.y]);
-      setLines(lines.slice()); // 배열을 복사하여 상태 업데이트 강제
+      setLines(lines.slice());
       setRemainingLength(prev => prev - dist);
     }
 
-    // 이동(패닝) 로직
     if (isPanning.current) {
       const stage = stageRef.current;
       const point = stage.getPointerPosition();
@@ -157,7 +154,7 @@ const UniversePage = () => {
   const handleMouseUp = () => {
     if (isDrawing.current) {
       const lastLine = lines[lines.length - 1];
-      if (lastLine && lastLine.points.length > 4) { // 점이나 매우 짧은 선 제외
+      if (lastLine && lastLine.points.length > 4) {
           socket.current.emit('draw_line', lastLine);
       }
     }
@@ -165,7 +162,6 @@ const UniversePage = () => {
     isPanning.current = false;
   };
   
-  // ★ 로딩 중일 때 보여줄 UI (선택 사항이지만 사용자 경험에 좋음)
   if (loading) {
     return (
         <div className="universe-container">
@@ -212,4 +208,4 @@ const UniversePage = () => {
   );
 };
 
-export default UniversePage;  
+export default UniversePage;

@@ -1,13 +1,15 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/pages/01_WipeCanvas/WipeCanvas.js
+
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Letter from './components/Letter';
 import Wiper from './components/Wiper';
 import WiperSettings from './WiperSettings';
 import '../../App.css';
 import { audioUnlocker } from '../../AudioUnlocker';
-import { getLatestWipe } from '../../api';
+import { getLatestWipe, getWipeSettingsByEmail, saveWipeSettings } from '../../api';
+import { useAuth } from '../../AuthContext';
 
-// ✅ FIX: 하드코딩된 텍스트를 제거합니다. 이제 appSettings.text를 직접 사용합니다.
-// const CHARS = "GLITZ";
+// --- 물리 엔진 및 렌더링 관련 상수 및 변수 ---
 let LETTER_SIZE = 80;
 let FONT_SIZE = 100;
 let DIV = 13000;
@@ -30,7 +32,7 @@ let count = 0;
 let lastCollisionSoundTime = 0;
 const MIN_SOUND_INTERVAL = 50;
 
-const cAudio = "wave3.mp3";
+const cAudio = "/assets/music/wave3.mp3";
 const cAudioP = 0.001 * (window.innerHeight * window.innerWidth) / 1800000;
 const BACKGROUND_AUDIO_VOLUME = 0.15;
 const COLLISION_AUDIO_VOLUME = 0.1;
@@ -65,39 +67,54 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
     const compressorRef = useRef(null);
     const backgroundAudioRef = useRef(null);
     const [audioInitialized, setAudioInitialized] = useState(false);
+    
+    const { user, loading: authLoading } = useAuth();
     const [appSettings, setAppSettings] = useState(defaultSettings);
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        if (authLoading) return;
+
         const fetchInitialSettings = async () => {
             setIsLoading(true);
-            try {
-                const dataFromDB = await getLatestWipe();
-                if (dataFromDB) {
-                    setAppSettings(prev => ({
-                        ...defaultSettings,
-                        ...dataFromDB,
-                    }));
-                }
-            } catch (error) {
-                console.error("Wipe의 최신 설정 정보를 가져오는 데 실패했습니다.", error);
-            } finally {
-                setIsLoading(false);
+            let dataFromDB = null;
+
+            if (user) {
+                dataFromDB = await getWipeSettingsByEmail(user.email);
             }
+
+            if (!dataFromDB) {
+                dataFromDB = await getLatestWipe();
+            }
+            
+            if (dataFromDB) {
+                setAppSettings(prev => ({ ...prev, ...dataFromDB }));
+            }
+
+            setIsLoading(false);
         };
         fetchInitialSettings();
-    }, []);
+    }, [user, authLoading]);
+    
+    const handleSettingsUpdate = useCallback((newSettings) => {
+        const updatedSettings = { ...appSettings, ...newSettings };
+        setAppSettings(updatedSettings);
+
+        if (user) {
+            saveWipeSettings({ ...updatedSettings, email: user.email });
+        }
+    }, [user, appSettings]);
 
     const handleColorChange = (top, bottom) => {
-        setAppSettings(prev => ({ ...prev, topColor: top, bottomColor: bottom }));
+        handleSettingsUpdate({ topColor: top, bottomColor: bottom });
     };
 
     const handleSettingsChange = (newSettings) => {
-        setAppSettings(prev => ({ ...prev, ...newSettings }));
+        handleSettingsUpdate(newSettings);
     };
 
     const handleTextChange = (newText) => {
-        setAppSettings(prev => ({...prev, text: newText}));
+        handleSettingsUpdate({ text: newText });
     };
 
     useEffect(() => {
@@ -118,6 +135,8 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
         setAudioInitialized(true);
         const context = audioUnlocker.ctx;
         audioContextRef.current = context;
+        if (!context) return;
+        
         const compressor = context.createDynamicsCompressor();
         compressor.threshold.setValueAtTime(-50, context.currentTime);
         compressor.knee.setValueAtTime(40, context.currentTime);
@@ -126,10 +145,16 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
         compressor.release.setValueAtTime(0.25, context.currentTime);
         compressor.connect(context.destination);
         compressorRef.current = compressor;
-        const response = await fetch(cAudio);
-        const arrayBuffer = await response.arrayBuffer();
-        const decodedAudio = await context.decodeAudioData(arrayBuffer);
-        collisionSoundBufferRef.current = decodedAudio;
+        
+        try {
+            const response = await fetch(cAudio);
+            const arrayBuffer = await response.arrayBuffer();
+            const decodedAudio = await context.decodeAudioData(arrayBuffer);
+            collisionSoundBufferRef.current = decodedAudio;
+        } catch(e) {
+            console.error("Error decoding collision audio", e);
+        }
+
         if (backgroundAudioRef.current) {
             backgroundAudioRef.current.volume = 0;
             await backgroundAudioRef.current.play().catch(error => console.error("Audio play failed:", error));
@@ -169,8 +194,6 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
     let lastTimestamp = 0;
     let cA = 0;
 
-    // ✅ FIX: 애니메이션 useEffect가 appSettings를 의존하도록 변경합니다.
-    // 이렇게 하면 DB에서 설정을 불러오거나 사용자가 설정을 변경할 때마다 애니메이션이 최신 값으로 다시 시작됩니다.
     useEffect(() => {
         const animate = (timestamp) => {
             WIPER_PIVOT_X = window.innerWidth / 2;
@@ -246,8 +269,7 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
                     const numRemoved = Math.min(MAX_LETTERS - visibleLetters.length, 50);
                     const newLetters = [];
                     function getRotSpeed() { const speed = Math.random() - 0.5; if (speed > 0.25 || speed < -0.25) return speed; return 0; }
-                    if (count % 3 == 0 && numRemoved > 0) {
-                        // ✅ FIX: 하드코딩된 'CHARS' 대신 appSettings.text를 사용합니다.
+                    if (count % 3 === 0 && numRemoved > 0) {
                         const charsToUse = appSettings.text && appSettings.text.length > 0 ? appSettings.text : "GLITZ";
                         const char = charsToUse[Math.floor(Math.random() * charsToUse.length)];
                         newLetters.push({ id: Math.random(), char: char, x: Math.random() * window.innerWidth, y: -LETTER_SIZE, rotation: Math.random() * 360, speedX: (Math.random() - 0.5) * 2, speedY: getSpeed(visibleLetters.length), maxSpeedX: Math.random(), rotSpeed: getRotSpeed(), fontSize: FONT_SIZE });
@@ -271,7 +293,7 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
         isMouseDownRef.current = false;
     };
 
-    if (isLoading) {
+    if (isLoading || authLoading) {
         return (
             <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#1c1c1c' }}>
                 <p style={{ color: 'white', fontSize: '2rem', fontFamily: 'sans-serif' }}>Loading Settings...</p>
@@ -294,7 +316,7 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
         >
-            <audio ref={backgroundAudioRef} src="/WipeBackground2.mp3" loop />
+            <audio ref={backgroundAudioRef} src="/assets/music/WipeBackground2.mp3" loop />
             <>
                 <Wiper pivotX={WIPER_PIVOT_X} pivotY={WIPER_PIVOT_Y} angle={wiperAngle} length={WIPER_LENGTH} thickness={WIPER_THICKNESS} />
                 {letters.map(letter => (
