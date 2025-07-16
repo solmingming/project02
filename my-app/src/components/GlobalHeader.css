@@ -1,8 +1,19 @@
-.global-header {
+.global-header-container {
   position: fixed;
   top: 0;
-  left: 0;
-  width: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 450px;
+  height: 50px;
+  z-index: 1000;
+}
+
+.global-header {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100vw;
   z-index: 10;
   display: flex;
   justify-content: center;
@@ -11,6 +22,12 @@
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
+  pointer-events: none;
+}
+
+.global-header.hovered {
+  height: 180px;
+  pointer-events: auto;
 }
 
 .global-header::before {
@@ -20,16 +37,12 @@
   left: 0;
   width: 100%;
   height: 110%;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0)); /* 상단 50% 투명도, 하단 0% 투명도 */
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
   transform: scaleY(0);
   transform-origin: top;
   opacity: 0;
   transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
   z-index: 1;
-}
-
-.global-header.hovered {
-  height: 180px;
 }
 
 .global-header.hovered::before {

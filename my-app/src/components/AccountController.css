@@ -1,0 +1,55 @@
+/* 팝오버의 기준점이자 아이콘을 화면 우측 상단에 고정하는 컨테이너 */
+.account-controller-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1200;
+}
+
+/* 클릭 가능한 아이콘 영역의 기본 스타일 */
+.account-icon-wrapper {
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.logged-out-border {
+  border: 2px solid #000;
+  box-sizing: border-box;
+}
+
+.account-icon-wrapper:hover {
+  background-color: rgba(0, 0, 0, 0.08);
+}
+
+.account-icon-wrapper svg {
+  color: #5f6368;
+  width: 28px;
+  height: 28px;
+}
+
+.account-profile-pic {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.account-initials-circle {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: #1a73e8;
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  font-weight: 600;
+}

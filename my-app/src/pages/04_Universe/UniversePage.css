@@ -1,0 +1,19 @@
+.universe-container {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden; /* 스크롤바 숨기기 */
+  cursor: crosshair;
+  background-color: #f0f0f0; /* 캔버스 배경색 */
+}
+
+.remaining-length-display {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 5px;
+  z-index: 10;
+  font-family: sans-serif;
+}

@@ -1,0 +1,181 @@
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+/* 커서 깜박임 애니메이션 정의 */
+@keyframes blink {
+  from, to { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.settings-panel {
+  background-color: white;
+  padding: 25px;
+  border-radius: 15px;
+  width: 420px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.settings-panel-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-section {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 20px;
+  width: 100%;
+}
+
+.settings-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.main-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex: 1;
+    min-height: 120px;
+}
+
+.gradient-preview-container {
+  position: relative;
+  width: 80px;
+  height: 120px;
+  flex-shrink: 0;
+}
+
+.gradient-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 10px;
+  border: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.color-area {
+    flex: 1;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+}
+
+.color-area:hover {
+    filter: brightness(1.1);
+}
+
+.color-picker-wrapper {
+  position: absolute;
+  left: 95px;
+  z-index: 1001;
+  background: white;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.color-picker-wrapper.top {
+    top: 0;
+}
+
+.color-picker-wrapper.bottom {
+    top: auto;
+    bottom: 0;
+}
+
+.glitz-text-container {
+    width: 100%;
+    border-bottom: 2px solid #000;
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 70px;
+}
+
+.glitz-text {
+    font-family: 'Pretendard', 'Times New Roman', Times, serif;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.1;
+    cursor: pointer;
+    text-align: center;
+    /* 가상 요소 위치의 기준이 됨 */
+    position: relative;
+    /* 텍스트 뒤에 약간의 공간 확보 */
+    padding-right: 4px;
+}
+
+.glitz-text::after {
+    content: '';
+    position: absolute;
+    top: 10%;
+    right: 0;
+    height: 80%;
+    width: 2px;
+    background-color: #333;
+    animation: blink 1s step-end infinite;
+}
+
+
+.glitz-text-input {
+    font-family: 'Pretendard', 'Times New Roman', Times, serif;
+    font-weight: 600;
+    margin: 0;
+    padding: 0;
+    line-height: 1.1;
+    text-align: center;
+    width: 100%;
+    border: none;
+    background-color: transparent;
+    font-size: 3rem;
+    caret-color: #333;
+}
+
+.glitz-text-input:focus {
+    outline: none;
+}
+
+.save-button-container {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.save-button {
+    cursor: pointer;
+    width: 40px;
+    height: 40px;
+    transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+.save-button:hover {
+    transform: scale(1.1);
+    filter: brightness(0.9);
+}

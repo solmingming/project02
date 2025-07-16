@@ -7,6 +7,9 @@ class AudioUnlocker {
       if (this.ctx.state === 'suspended') this.ctx.resume();
       this.unlocked = true;
       window.__hasUserInteracted = true;
+
+      window.dispatchEvent(new Event('audioUnlocked')); 
+
       ['click','touchstart','keydown'].forEach(e =>
         window.removeEventListener(e, unlock, true)
       );

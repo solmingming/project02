@@ -77,9 +77,19 @@ function BackgroundAudio({ children }) {
     const { camera } = useThree();
     const [audioLoaded, setAudioLoaded] = useState(false);
     const [audioStarted, setAudioStarted] = useState(window.__hasUserInteracted);
+    const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
+
+    // --- 수정된 부분 1: audioStarted 상태를 추적할 ref 생성 ---
+    const audioStartedRef = useRef(audioStarted);
+    // audioStarted 상태가 변경될 때마다 ref의 current 값을 업데이트
+    useEffect(() => {
+        audioStartedRef.current = audioStarted;
+    }, [audioStarted]);
+
     const listenerRef = useRef();
     const riverSound = useRef();
     const birdSound = useRef();
+    // ... 나머지 사운드 ref들
     const splashSound = useRef();
     const splashSmallSound = useRef();
     const splashBigSound = useRef();
@@ -93,6 +103,7 @@ function BackgroundAudio({ children }) {
         camera.add(listener);
         listenerRef.current = listener;
 
+        // 오디오 객체 생성 및 로딩 (이전과 동일)
         riverSound.current = new THREE.Audio(listener);
         birdSound.current = new THREE.Audio(listener);
         splashSound.current = new THREE.Audio(listener);
@@ -104,7 +115,6 @@ function BackgroundAudio({ children }) {
         splashTreeSound.current = new THREE.Audio(listener);
 
         const audioLoader = new THREE.AudioLoader();
-
         const loadPromises = [
             new Promise(res => audioLoader.load('/river.mp3', buffer => { riverSound.current.setBuffer(buffer); riverSound.current.setLoop(true); riverSound.current.setVolume(0); res(); })),
             new Promise(res => audioLoader.load('/bird.mp3', buffer => { birdSound.current.setBuffer(buffer); birdSound.current.setLoop(true); birdSound.current.setVolume(0); res(); })),
@@ -117,28 +127,45 @@ function BackgroundAudio({ children }) {
             new Promise(res => audioLoader.load('/splash_tree.mp3', buffer => { splashTreeSound.current.setBuffer(buffer); splashTreeSound.current.setVolume(0.65); res(); })),
         ];
         Promise.all(loadPromises).then(() => setAudioLoaded(true));
+
         return () => {
             [
-                riverSound,
-                birdSound,
-                splashSound,
-                splashSmallSound,
-                splashBigSound,
-                splashFoliageSound,
-                splashTinySound,
-                splashXSmallSound,
-                splashTreeSound
+                riverSound, birdSound, splashSound, splashSmallSound, splashBigSound,
+                splashFoliageSound, splashTinySound, splashXSmallSound, splashTreeSound
             ].forEach(ref => {
-                if (ref.current?.isPlaying) {
-                    ref.current.stop();
-                }
+                if (ref.current?.isPlaying) ref.current.stop();
             });
-            camera.remove(listenerRef.current);
-            if (listenerRef.current.context.state !== 'closed') {
-                listenerRef.current.context.close();
-            }
+            if (listenerRef.current) camera.remove(listenerRef.current);
         };
     }, [camera]);
+
+    useEffect(() => {
+        const handleAudioUnlock = () => {
+            setAudioStarted(true);
+            setShowUnlockPrompt(false);
+        };
+        if (window.__hasUserInteracted) {
+            handleAudioUnlock();
+        } else {
+            window.addEventListener('audioUnlocked', handleAudioUnlock);
+        }
+        return () => window.removeEventListener('audioUnlocked', handleAudioUnlock);
+    }, []);
+
+    useEffect(() => {
+        const audioContext = listenerRef.current?.context;
+        if (audioLoaded && !audioStarted && audioContext?.state === 'suspended') {
+            setShowUnlockPrompt(true);
+        }
+    }, [audioLoaded, audioStarted]);
+
+    const handleManualUnlock = () => {
+        listenerRef.current?.context.resume().then(() => {
+            setAudioStarted(true);
+            setShowUnlockPrompt(false);
+            window.__hasUserInteracted = true;
+        });
+    };
 
     useEffect(() => {
         if (audioLoaded && audioStarted) {
@@ -152,12 +179,14 @@ function BackgroundAudio({ children }) {
         if (birdSound.current?.isPlaying && birdSound.current.getVolume() < BIRD_VOLUME) { birdSound.current.setVolume(Math.min(birdSound.current.getVolume() + (BIRD_VOLUME / FADE_IN_DURATION) * delta, BIRD_VOLUME)); }
     });
 
+    // --- 수정된 부분 2: playSound 함수가 ref를 사용하도록 변경 ---
     const playSound = useCallback((soundRef) => {
-        if (soundRef.current?.buffer) {
+        // 호출 시점의 최신 audioStarted 상태를 ref.current로 확인
+        if (soundRef.current?.buffer && audioStartedRef.current) {
             if (soundRef.current.isPlaying) soundRef.current.stop();
             soundRef.current.play();
         }
-    }, []);
+    }, []); // 의존성 배열을 비워서 함수가 한 번만 생성되도록 함
 
     const playSplash = useCallback(() => playSound(splashSound), [playSound]);
     const playSplashSmall = useCallback(() => playSound(splashSmallSound), [playSound]);
@@ -168,17 +197,23 @@ function BackgroundAudio({ children }) {
     const playSplashTree = useCallback(() => playSound(splashTreeSound), [playSound]);
 
     const audioContextValue = useMemo(() => ({
-        playSplash,
-        playSplashSmall,
-        playSplashBig,
-        playSplashFoliage,
-        playSplashTiny,
-        playSplashXSmall,
-        playSplashTree,
-        audioLoaded
+        playSplash, playSplashSmall, playSplashBig, playSplashFoliage,
+        playSplashTiny, playSplashXSmall, playSplashTree, audioLoaded
     }), [playSplash, playSplashSmall, playSplashBig, playSplashFoliage, playSplashTiny, playSplashXSmall, playSplashTree, audioLoaded]);
 
-    return <AudioContext.Provider value={audioContextValue}>{children}</AudioContext.Provider>;
+    return (
+        <AudioContext.Provider value={audioContextValue}>
+            {children}
+            {showUnlockPrompt && (
+                <Html center>
+                    <div onClick={handleManualUnlock} style={{ cursor: 'pointer', padding: '15px 25px', backgroundColor: 'rgba(0, 0, 0, 0.8)', color: 'white', borderRadius: '10px', textAlign: 'center', border: '1px solid white' }}>
+                        <h2 style={{ margin: 0, paddingBottom: '10px', fontSize: '20px' }}>소리 켜기</h2>
+                        <p style={{ margin: 0, fontSize: '14px' }}>클릭하여 소리를 활성화하세요</p>
+                    </div>
+                </Html>
+            )}
+        </AudioContext.Provider>
+    );
 }
 
 function Fish({ id, onOutOfBounds, initialPosition, speed, wiggleSpeed, wiggleAmount, scale }) {
