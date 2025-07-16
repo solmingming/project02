@@ -2,7 +2,7 @@
 
 const express = require('express');
 const router = express.Router();
-const { Line } = require('../models/universe');
+const { Line } = require('../models/Universe');
 
 // 이 라우터는 이제 주로 예비용입니다.
 // 대부분의 실시간 데이터 교환은 socket.io를 통해 이루어집니다.

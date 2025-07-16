@@ -1,6 +1,6 @@
 // server/socket/socketHandler.js
 
-const { Line, UniverseUser } = require('../models/universe');
+const { Line, UniverseUser } = require('../models/Universe');
 
 // 매일 사용량을 초기화하기 위한 상수 (밀리초 단위)
 const ONE_DAY_IN_MS = 24 * 60 * 60 * 1000;
