@@ -2,5 +2,32 @@
   "dependencies": {
     "react-p5": "^1.4.1",
     "react-spring": "^10.0.1"
+<<<<<<< HEAD
+=======
+  },
+  "name": "glitz",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+ "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "server": "npm run dev --prefix server",
+    "client": "npm start --prefix client",
+    "dev": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/solmingming/project02.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/solmingming/project02/issues"
+  },
+  "homepage": "https://github.com/solmingming/project02#readme",
+  "devDependencies": {
+    "concurrently": "^9.2.0"
+>>>>>>> origin/solmin5
   }
 }

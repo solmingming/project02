@@ -77,6 +77,7 @@ function BackgroundAudio({ children }) {
     const { camera } = useThree();
     const [audioLoaded, setAudioLoaded] = useState(false);
     const [audioStarted, setAudioStarted] = useState(window.__hasUserInteracted);
+<<<<<<< HEAD
     const [showUnlockPrompt, setShowUnlockPrompt] = useState(false);
 
     // --- 수정된 부분 1: audioStarted 상태를 추적할 ref 생성 ---
@@ -90,6 +91,11 @@ function BackgroundAudio({ children }) {
     const riverSound = useRef();
     const birdSound = useRef();
     // ... 나머지 사운드 ref들
+=======
+    const listenerRef = useRef();
+    const riverSound = useRef();
+    const birdSound = useRef();
+>>>>>>> origin/solmin5
     const splashSound = useRef();
     const splashSmallSound = useRef();
     const splashBigSound = useRef();
@@ -103,7 +109,10 @@ function BackgroundAudio({ children }) {
         camera.add(listener);
         listenerRef.current = listener;
 
+<<<<<<< HEAD
         // 오디오 객체 생성 및 로딩 (이전과 동일)
+=======
+>>>>>>> origin/solmin5
         riverSound.current = new THREE.Audio(listener);
         birdSound.current = new THREE.Audio(listener);
         splashSound.current = new THREE.Audio(listener);
@@ -115,6 +124,10 @@ function BackgroundAudio({ children }) {
         splashTreeSound.current = new THREE.Audio(listener);
 
         const audioLoader = new THREE.AudioLoader();
+<<<<<<< HEAD
+=======
+
+>>>>>>> origin/solmin5
         const loadPromises = [
             new Promise(res => audioLoader.load('/river.mp3', buffer => { riverSound.current.setBuffer(buffer); riverSound.current.setLoop(true); riverSound.current.setVolume(0); res(); })),
             new Promise(res => audioLoader.load('/bird.mp3', buffer => { birdSound.current.setBuffer(buffer); birdSound.current.setLoop(true); birdSound.current.setVolume(0); res(); })),
@@ -127,6 +140,7 @@ function BackgroundAudio({ children }) {
             new Promise(res => audioLoader.load('/splash_tree.mp3', buffer => { splashTreeSound.current.setBuffer(buffer); splashTreeSound.current.setVolume(0.65); res(); })),
         ];
         Promise.all(loadPromises).then(() => setAudioLoaded(true));
+<<<<<<< HEAD
 
         return () => {
             [
@@ -136,10 +150,33 @@ function BackgroundAudio({ children }) {
                 if (ref.current?.isPlaying) ref.current.stop();
             });
             if (listenerRef.current) camera.remove(listenerRef.current);
+=======
+        return () => {
+            [
+                riverSound,
+                birdSound,
+                splashSound,
+                splashSmallSound,
+                splashBigSound,
+                splashFoliageSound,
+                splashTinySound,
+                splashXSmallSound,
+                splashTreeSound
+            ].forEach(ref => {
+                if (ref.current?.isPlaying) {
+                    ref.current.stop();
+                }
+            });
+            camera.remove(listenerRef.current);
+            if (listenerRef.current.context.state !== 'closed') {
+                listenerRef.current.context.close();
+            }
+>>>>>>> origin/solmin5
         };
     }, [camera]);
 
     useEffect(() => {
+<<<<<<< HEAD
         const handleAudioUnlock = () => {
             setAudioStarted(true);
             setShowUnlockPrompt(false);
@@ -168,6 +205,8 @@ function BackgroundAudio({ children }) {
     };
 
     useEffect(() => {
+=======
+>>>>>>> origin/solmin5
         if (audioLoaded && audioStarted) {
             if (riverSound.current && !riverSound.current.isPlaying) riverSound.current.play();
             if (birdSound.current && !birdSound.current.isPlaying) birdSound.current.play();
@@ -179,6 +218,7 @@ function BackgroundAudio({ children }) {
         if (birdSound.current?.isPlaying && birdSound.current.getVolume() < BIRD_VOLUME) { birdSound.current.setVolume(Math.min(birdSound.current.getVolume() + (BIRD_VOLUME / FADE_IN_DURATION) * delta, BIRD_VOLUME)); }
     });
 
+<<<<<<< HEAD
     // --- 수정된 부분 2: playSound 함수가 ref를 사용하도록 변경 ---
     const playSound = useCallback((soundRef) => {
         // 호출 시점의 최신 audioStarted 상태를 ref.current로 확인
@@ -187,6 +227,14 @@ function BackgroundAudio({ children }) {
             soundRef.current.play();
         }
     }, []); // 의존성 배열을 비워서 함수가 한 번만 생성되도록 함
+=======
+    const playSound = useCallback((soundRef) => {
+        if (soundRef.current?.buffer) {
+            if (soundRef.current.isPlaying) soundRef.current.stop();
+            soundRef.current.play();
+        }
+    }, []);
+>>>>>>> origin/solmin5
 
     const playSplash = useCallback(() => playSound(splashSound), [playSound]);
     const playSplashSmall = useCallback(() => playSound(splashSmallSound), [playSound]);
@@ -197,6 +245,7 @@ function BackgroundAudio({ children }) {
     const playSplashTree = useCallback(() => playSound(splashTreeSound), [playSound]);
 
     const audioContextValue = useMemo(() => ({
+<<<<<<< HEAD
         playSplash, playSplashSmall, playSplashBig, playSplashFoliage,
         playSplashTiny, playSplashXSmall, playSplashTree, audioLoaded
     }), [playSplash, playSplashSmall, playSplashBig, playSplashFoliage, playSplashTiny, playSplashXSmall, playSplashTree, audioLoaded]);
@@ -214,6 +263,19 @@ function BackgroundAudio({ children }) {
             )}
         </AudioContext.Provider>
     );
+=======
+        playSplash,
+        playSplashSmall,
+        playSplashBig,
+        playSplashFoliage,
+        playSplashTiny,
+        playSplashXSmall,
+        playSplashTree,
+        audioLoaded
+    }), [playSplash, playSplashSmall, playSplashBig, playSplashFoliage, playSplashTiny, playSplashXSmall, playSplashTree, audioLoaded]);
+
+    return <AudioContext.Provider value={audioContextValue}>{children}</AudioContext.Provider>;
+>>>>>>> origin/solmin5
 }
 
 function Fish({ id, onOutOfBounds, initialPosition, speed, wiggleSpeed, wiggleAmount, scale }) {

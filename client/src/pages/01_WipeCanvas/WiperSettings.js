@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { HexColorPicker } from 'react-colorful';
 import './WiperSettings.css';
+import { createWipe } from '../../api';
 
 const saveIcon = process.env.PUBLIC_URL + '/save.svg';
 
@@ -57,8 +58,8 @@ const WiperSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, onTex
   };
 
   const handleTextChangeInternal = (e) => {
-    if (e.target.value.length <= 20) {
-      setTempSettings(prev => ({...prev, text: e.target.value}));
+    if (e.target.value.length <= 5) {
+      setTempSettings(prev => ({...prev, text: e.target.value.toUpperCase()}));
     }
   };
 
@@ -76,25 +77,31 @@ const WiperSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, onTex
     }
   };
 
-  const handleSave = () => {
-    onColorChange(tempSettings.topColor, tempSettings.bottomColor);
-    onSettingsChange({
-      textQuantity: tempSettings.textQuantity,
-      textSize: tempSettings.textSize,
-      kickForce: tempSettings.kickForce,
-    });
-    onTextChange(tempSettings.text);
-    onClose();
+  // ✅ FIX: 데이터 이름이 통일되었으므로, 더 이상 필드명을 변환하지 않습니다.
+  const handleSave = async () => {
+    // tempSettings 객체를 그대로 API 함수에 전달합니다.
+    const result = await createWipe(tempSettings);
+
+    if (result) {
+      console.log('🎉 [Wipe] 서버 저장 성공!', result);
+      
+      // 성공 시, 부모 컴포넌트의 상태도 업데이트
+      onColorChange(tempSettings.topColor, tempSettings.bottomColor);
+      onSettingsChange({
+        textQuantity: tempSettings.textQuantity,
+        textSize: tempSettings.textSize,
+        kickForce: tempSettings.kickForce,
+      });
+      onTextChange(tempSettings.text);
+
+      onClose();
+    } else {
+      console.error('🔥 [Wipe] 서버 저장 실패!');
+    }
   };
 
   const handleClose = () => {
-    if (haveChanges) {
-      if (window.confirm("정말 변경을 취소하시겠습니까?")) {
-        onClose();
-      }
-    } else {
-      onClose();
-    }
+    onClose();
   };
   
   const getFontSizeForPanel = (length) => {
@@ -132,6 +139,7 @@ const WiperSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, onTex
     setShowBottomPicker(prev => !prev);
     setShowTopPicker(false);
   };
+
 
   return (
     <div className="settings-overlay" onClick={handleOverlayClick}>

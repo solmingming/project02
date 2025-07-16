@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+
+
 import { HexColorPicker } from 'react-colorful';
 import './BouncingSettings.css';
+
+import { createBouncing } from '../../api'; 
 
 const saveIcon = process.env.PUBLIC_URL + '/save.svg';
 
@@ -81,17 +85,49 @@ const BouncingSettings = ({ isOpen, onClose, onColorChange, onSettingsChange, on
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     onColorChange(tempSettings.topColor, tempSettings.bottomColor);
     onSettingsChange({
       damping: tempSettings.damping,
       kValue: tempSettings.kValue,
       sampleFactor: tempSettings.sampleFactor,
-      textSize: tempSettings.textSize, // textSize 저장
+      textSize: tempSettings.textSize,
     });
     onTextChange(tempSettings.text);
+    
+        // ✅ 3. 백엔드에 데이터를 저장하는 API 호출
+      try {
+    // 2. 백엔드로 데이터 전송!
+    // tempSettings state에 사용자가 변경한 모든 값이 들어있습니다.
+    const response = await createBouncing(tempSettings);
+
+    // 3. 성공 피드백
+    console.log('🎉 서버 저장 성공!', response.data);
+    alert('성공적으로 저장되었습니다.');
+
+    // 4. 성공 시, 부모 컴포넌트(BouncingPage)의 상태도 업데이트
+    onColorChange(tempSettings.topColor, tempSettings.bottomColor);
+    onSettingsChange({
+      damping: tempSettings.damping,
+      kValue: tempSettings.kValue,
+      sampleFactor: tempSettings.sampleFactor,
+      textSize: tempSettings.textSize,
+    });
+    onTextChange(tempSettings.text);
+
+    // 5. 설정 패널 닫기
     onClose();
-  };
+
+  } catch (error) {
+    // 6. 실패 피드백
+    console.error('🔥 서버 저장 실패!', error);
+    alert('저장에 실패했습니다. 잠시 후 다시 시도해주세요.');
+  } finally {
+    // 7. (선택사항) 로딩 상태 종료
+    // 예: setIsLoading(false);
+  }
+};
+
 
   const handleClose = () => {
     if (haveChanges) {

@@ -4,8 +4,10 @@ import Wiper from './components/Wiper';
 import WiperSettings from './WiperSettings';
 import '../../App.css';
 import { audioUnlocker } from '../../AudioUnlocker';
+import { getLatestWipe } from '../../api';
 
-const CHARS = "GLITZ";
+// ✅ FIX: 하드코딩된 텍스트를 제거합니다. 이제 appSettings.text를 직접 사용합니다.
+// const CHARS = "GLITZ";
 let LETTER_SIZE = 80;
 let FONT_SIZE = 100;
 let DIV = 13000;
@@ -33,6 +35,15 @@ const cAudioP = 0.001 * (window.innerHeight * window.innerWidth) / 1800000;
 const BACKGROUND_AUDIO_VOLUME = 0.15;
 const COLLISION_AUDIO_VOLUME = 0.1;
 
+const defaultSettings = {
+    topColor: '#FFC2AE',
+    bottomColor: '#FFDA73',
+    textQuantity: 3,
+    textSize: 2,
+    kickForce: 1.03,
+    text: "GLITZ"
+};
+
 function getSpeed(length) {
     const normalizedInput = (length - 1) / (MAX_LETTERS - 1);
     const transformedInput = (normalizedInput - 0.5) * steepness;
@@ -49,23 +60,33 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
     const animationFrameId = useRef(null);
     const isMouseDownRef = useRef(false);
     const prevAngleRef = useRef(WIPER_CENTER_ANGLE);
-
     const audioContextRef = useRef(null);
     const collisionSoundBufferRef = useRef(null);
-
     const compressorRef = useRef(null);
-
     const backgroundAudioRef = useRef(null);
     const [audioInitialized, setAudioInitialized] = useState(false);
+    const [appSettings, setAppSettings] = useState(defaultSettings);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const [appSettings, setAppSettings] = useState({
-        topColor: '#FFC2AE',
-        bottomColor: '#FFDA73',
-        textQuantity: 3,
-        textSize: 2,
-        kickForce: 1.03,
-        text: "GLITZ"
-    });
+    useEffect(() => {
+        const fetchInitialSettings = async () => {
+            setIsLoading(true);
+            try {
+                const dataFromDB = await getLatestWipe();
+                if (dataFromDB) {
+                    setAppSettings(prev => ({
+                        ...defaultSettings,
+                        ...dataFromDB,
+                    }));
+                }
+            } catch (error) {
+                console.error("Wipe의 최신 설정 정보를 가져오는 데 실패했습니다.", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchInitialSettings();
+    }, []);
 
     const handleColorChange = (top, bottom) => {
         setAppSettings(prev => ({ ...prev, topColor: top, bottomColor: bottom }));
@@ -82,54 +103,40 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
     useEffect(() => {
         const textQuantityMap = { 1: 22000, 2: 17000, 3: 13000, 4: 10000, 5: 7000 };
         DIV = textQuantityMap[appSettings.textQuantity] || 13000;
-
         LETTER_KICK_FORCE = appSettings.kickForce;
-
         const textSizeMap = { 1: { size: 40, font: 50 }, 2: { size: 80, font: 100 }, 3: { size: 100, font: 125 } };
         const settings = textSizeMap[appSettings.textSize] || { size: 80, font: 100 };
         LETTER_SIZE = settings.size;
         FONT_SIZE = settings.font;
-
-        // 설정 변경 시 기존 글자들의 폰트 크기도 업데이트
         setLetters(prevLetters =>
             prevLetters.map(letter => ({ ...letter, fontSize: FONT_SIZE }))
         );
-    }, [appSettings]);
-
+    }, [appSettings.textQuantity, appSettings.kickForce, appSettings.textSize]);
 
     const initAudio = async () => {
         if (audioInitialized) return;
-
         setAudioInitialized(true);
-
         const context = audioUnlocker.ctx;
         audioContextRef.current = context;
-
         const compressor = context.createDynamicsCompressor();
         compressor.threshold.setValueAtTime(-50, context.currentTime);
         compressor.knee.setValueAtTime(40, context.currentTime);
         compressor.ratio.setValueAtTime(12, context.currentTime);
         compressor.attack.setValueAtTime(0, context.currentTime);
         compressor.release.setValueAtTime(0.25, context.currentTime);
-
         compressor.connect(context.destination);
         compressorRef.current = compressor;
-
         const response = await fetch(cAudio);
         const arrayBuffer = await response.arrayBuffer();
         const decodedAudio = await context.decodeAudioData(arrayBuffer);
         collisionSoundBufferRef.current = decodedAudio;
-
         if (backgroundAudioRef.current) {
             backgroundAudioRef.current.volume = 0;
             await backgroundAudioRef.current.play().catch(error => console.error("Audio play failed:", error));
-
             let fadeInterval = setInterval(() => {
                 if (backgroundAudioRef.current.volume < BACKGROUND_AUDIO_VOLUME) {
                     let newVolume = backgroundAudioRef.current.volume + 0.05;
-                    if (newVolume > BACKGROUND_AUDIO_VOLUME) {
-                        newVolume = BACKGROUND_AUDIO_VOLUME;
-                    }
+                    if (newVolume > BACKGROUND_AUDIO_VOLUME) newVolume = BACKGROUND_AUDIO_VOLUME;
                     backgroundAudioRef.current.volume = newVolume;
                 } else {
                     clearInterval(fadeInterval);
@@ -144,31 +151,26 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
 
     const playCollisionSound = () => {
         if (!audioContextRef.current || !collisionSoundBufferRef.current) return;
-
         const now = Date.now();
-        if (now - lastCollisionSoundTime < MIN_SOUND_INTERVAL) {
-            return;
-        }
+        if (now - lastCollisionSoundTime < MIN_SOUND_INTERVAL) return;
         lastCollisionSoundTime = now;
-
         if (audioContextRef.current.state === 'suspended') {
             audioContextRef.current.resume();
         }
-
         const sourceNode = audioContextRef.current.createBufferSource();
         sourceNode.buffer = collisionSoundBufferRef.current;
-
         const gainNode = audioContextRef.current.createGain();
         gainNode.gain.value = COLLISION_AUDIO_VOLUME;
         sourceNode.connect(gainNode);
         gainNode.connect(compressorRef.current);
-
         sourceNode.start(0);
     };
 
     let lastTimestamp = 0;
     let cA = 0;
 
+    // ✅ FIX: 애니메이션 useEffect가 appSettings를 의존하도록 변경합니다.
+    // 이렇게 하면 DB에서 설정을 불러오거나 사용자가 설정을 변경할 때마다 애니메이션이 최신 값으로 다시 시작됩니다.
     useEffect(() => {
         const animate = (timestamp) => {
             WIPER_PIVOT_X = window.innerWidth / 2;
@@ -221,9 +223,7 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
                             const distance = Math.sqrt(dx * dx + dy * dy);
                             const minDistance = LETTER_SIZE;
                             if (distance < minDistance && distance > 0) {
-                                if (Math.random() < cAudioP)
-                                    playCollisionSound();
-
+                                if (Math.random() < cAudioP) playCollisionSound();
                                 const overlap = (minDistance - distance) / 2;
                                 const nx = dx / distance; const ny = dy / distance;
                                 letterA.x -= overlap * nx; letterA.y -= overlap * ny;
@@ -247,8 +247,10 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
                     const newLetters = [];
                     function getRotSpeed() { const speed = Math.random() - 0.5; if (speed > 0.25 || speed < -0.25) return speed; return 0; }
                     if (count % 3 == 0 && numRemoved > 0) {
-                        const char = CHARS[Math.floor(Math.random() * CHARS.length)];
-                        newLetters.push({ id: Math.random(), char: char, x: Math.random() * window.innerWidth, y: -LETTER_SIZE, rotation: Math.random() * 360, speedX: (Math.random() - 0.5) * 2, speedY: getSpeed(visibleLetters.length), maxSpeedX: Math.random(), rotSpeed: getRotSpeed(), fontSize: FONT_SIZE }); // 새로 생성되는 글자에 fontSize 추가
+                        // ✅ FIX: 하드코딩된 'CHARS' 대신 appSettings.text를 사용합니다.
+                        const charsToUse = appSettings.text && appSettings.text.length > 0 ? appSettings.text : "GLITZ";
+                        const char = charsToUse[Math.floor(Math.random() * charsToUse.length)];
+                        newLetters.push({ id: Math.random(), char: char, x: Math.random() * window.innerWidth, y: -LETTER_SIZE, rotation: Math.random() * 360, speedX: (Math.random() - 0.5) * 2, speedY: getSpeed(visibleLetters.length), maxSpeedX: Math.random(), rotSpeed: getRotSpeed(), fontSize: FONT_SIZE });
                     }
                     return [...visibleLetters, ...newLetters];
                 });
@@ -258,7 +260,7 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
         };
         animationFrameId.current = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(animationFrameId.current);
-    }, [appSettings]); // Re-run animation setup when settings change
+    }, [appSettings]);
 
     const handleMouseDown = () => {
         initAudio();
@@ -268,6 +270,14 @@ const WipeCanvas = ({ isSettingsOpen, closeSettings }) => {
     const handleMouseUp = () => {
         isMouseDownRef.current = false;
     };
+
+    if (isLoading) {
+        return (
+            <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#1c1c1c' }}>
+                <p style={{ color: 'white', fontSize: '2rem', fontFamily: 'sans-serif' }}>Loading Settings...</p>
+            </div>
+        );
+    }
 
     return (
         <div
