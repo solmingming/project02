@@ -15,7 +15,7 @@ const app = express();
 
 // 1순위: CORS 설정 - .env 파일에 지정된 클라이언트의 요청을 허용합니다.
 app.use(cors({
-  origin: process.env.CORS_ORIGIN,
+  origin: (process.env.CORS_ORIGIN || '').split(','),
   credentials: true,
 }));
 
@@ -43,13 +43,19 @@ app.use('/api/grass', grassRoutes);
 const PORT = process.env.PORT || 5001; // .env 파일의 PORT 값을 사용하거나, 없다면 5001 사용
 
 // ✅ FIX: mongoose 6.x 버전 이상에서는 useNewUrlParser, useUnifiedTopology 옵션이 기본값이므로 제거해도 괜찮습니다.
-mongoose.connect(process.env.MONGO_URI)
+const mongoUri =
+  process.env.MONGO_URL        // Railway 기본
+  || process.env.MONGO_URI     // 로컬 .env
+  || process.env.RAILWAY_MONGO_URL // (예비) 다른 플러그인 이름
+  || 'mongodb://mongo:SiLnySkpCSzuWENkSgDLgTQbWwWxXDIG@mongodb.railway.internal:27017';
+
+mongoose.connect(mongoUri)
   .then(() => {
     console.log('MongoDB에 성공적으로 연결되었습니다.');
-    
+
     // 데이터베이스 연결 성공 시에만 서버를 실행하여 안정성을 높입니다.
     app.listen(PORT, () => {
-      console.log(`✅✅✅ 새로운 서버가 ${PORT} 에서 실행 중입니다! ✅✅✅`); 
+      console.log(`✅✅✅ 새로운 서버가 ${PORT} 에서 실행 중입니다! ✅✅✅`);
       console.log(`서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
     });
   })
