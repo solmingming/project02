@@ -124,6 +124,16 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
     setAppSettings(prev => ({ ...prev, topColor: top, bottomColor: bottom }));
   };
 
+  useEffect(() => {
+    if (isZooming) {
+      const timer = setTimeout(() => {
+        navigate('/wipe');
+      }, 1500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isZooming, navigate]);
+
   const resetIdleTimer = () => {
     isIdle.current = false;
     clearTimeout(idleTimeout.current);
@@ -278,26 +288,6 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
 
   const sketchOpacity = scale.to([1, 5, 15], [1, 1, 0]);
 
-  const menuAnimation = useSpring({
-    opacity: isZooming ? 1 : 0,
-    transform: isZooming ? 'translateY(0px)' : 'translateY(50px)',
-    config: { tension: 120, friction: 30 },
-    delay: isZooming ? 2300 : 0,
-  });
-
-  const PageSelectionMenu = () => (
-    <animated.div style={{ ...menuAnimation, position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center', zIndex: 20 }}>
-      <h2 style={{ color: 'white', fontFamily: "'Mungyeong-Gamhong-Apple', sans-serif", fontSize: '3rem', textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
-        어디로 가볼까요?
-      </h2>
-      <div style={{ marginTop: '2rem' }}>
-        <button onClick={() => navigate('/wipe')} className="menu-button">Wipe</button>
-        <button onClick={() => navigate('/grass-art')} className="menu-button">Grass Art</button>
-        <button onClick={() => navigate('/river')} className="menu-button">River</button>
-      </div>
-    </animated.div>
-  );
-
   if (isLoading) {
     return (
       <div style={{ height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#1c1c1c' }}>
@@ -325,7 +315,6 @@ const BouncingPage = ({ isSettingsOpen, closeSettings }) => {
           시작하기
         </button>
       )}
-      {isZooming && <PageSelectionMenu />}
       <style>{`
         .menu-button { margin: 0 15px; padding: 15px 35px; font-size: 1.8rem; font-family: 'Mungyeong-Gamhong-Apple', sans-serif; color: white; background-color: rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.9); border-radius: 50px; cursor: pointer; text-shadow: 0 2px 4px rgba(0,0,0,0.3); box-shadow: 0 4px 15px rgba(0,0,0,0.2); transition: all 0.3s ease; }
         .menu-button:hover { background-color: rgba(255, 255, 255, 0.2); transform: translateY(-5px); }

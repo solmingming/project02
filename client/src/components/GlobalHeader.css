@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 .global-header-container {
   position: fixed;
   top: 0;
@@ -15,13 +14,6 @@
   left: 50%;
   transform: translateX(-50%);
   width: 100vw;
-=======
-.global-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
->>>>>>> origin/solmin5
   z-index: 10;
   display: flex;
   justify-content: center;
@@ -30,15 +22,12 @@
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
-<<<<<<< HEAD
   pointer-events: none;
 }
 
 .global-header.hovered {
   height: 180px;
   pointer-events: auto;
-=======
->>>>>>> origin/solmin5
 }
 
 .global-header::before {
@@ -48,11 +37,7 @@
   left: 0;
   width: 100%;
   height: 110%;
-<<<<<<< HEAD
   background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
-=======
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0)); /* 상단 50% 투명도, 하단 0% 투명도 */
->>>>>>> origin/solmin5
   transform: scaleY(0);
   transform-origin: top;
   opacity: 0;
@@ -60,13 +45,6 @@
   z-index: 1;
 }
 
-<<<<<<< HEAD
-=======
-.global-header.hovered {
-  height: 180px;
-}
-
->>>>>>> origin/solmin5
 .global-header.hovered::before {
   transform: scale(1);
   opacity: 1;
