@@ -5,7 +5,7 @@ import { useAuth } from '../../AuthContext'; // ★ 수정됨
 import io from 'socket.io-client';
 import './UniversePage.css';
 
-const SOCKET_SERVER_URL = 'http://localhost:4000'; // 예시
+const SOCKET_SERVER_URL = process.env.REACT_APP_API_URL;
 
 const UniversePage = () => {
   const navigate = useNavigate();
